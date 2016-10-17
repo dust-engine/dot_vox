@@ -1,0 +1,6 @@
+[package]
+name = "dot_vox"
+version = "0.1.0"
+authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
+
+[dependencies]
