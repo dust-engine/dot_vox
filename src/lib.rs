@@ -3,20 +3,23 @@ use std::fs::File;
 use std::io::{Bytes, Read};
 use std::iter::Take;
 
+const MAGIC_NUMBER: &'static str = "VOX "; // om nom nom signficant whitespace
+
+#[derive(Debug, PartialEq)]
+pub struct DotVoxData;
+
 fn parse_chunk<'a>(bytes: Take<Bytes<File>>) -> Result<Cow<'a, str>, std::string::FromUtf8Error> {
   String::from_utf8(bytes.map(|b| b.unwrap()).collect()).map(|s| s.into())
 }
 
-pub fn load(filename: &str) -> Result<(), &'static str> {
-  let MAGIC_NUMBER = "VOX "; // om nom nom signficant whitespace
-
+pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
   match File::open(filename) {
     Ok(f) => {
       let iterator = f.bytes();
       match parse_chunk(iterator.take(4)) {
         Ok(magic_number) => {
           if magic_number == MAGIC_NUMBER {
-            Ok(())
+            Ok(DotVoxData)
           } else {
             Err("Not a valid MagicaVoxel .vox file")
           }
@@ -36,7 +39,7 @@ mod tests {
     fn valid_file_is_read_successfully() {
         let result = load("resources/placeholder.vox");
         assert!(result.is_ok());
-        //TODO test values returned
+        assert_eq!(result.unwrap(), DotVoxData);
     }
 
     #[test]
