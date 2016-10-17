@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::fs::File;
-use std::io;
 use std::io::{Bytes, Read};
 use std::iter::Take;
 
@@ -14,8 +13,6 @@ pub fn load(filename: &str) -> Result<(), &'static str> {
   match File::open(filename) {
     Ok(f) => {
       let iterator = f.bytes();
-    //   let magic_bytes = iterator.take(4);
-    //   println!("{:?}", magic_bytes);
       match parse_chunk(iterator.take(4)) {
         Ok(magic_number) => {
           if magic_number == MAGIC_NUMBER {
@@ -27,7 +24,7 @@ pub fn load(filename: &str) -> Result<(), &'static str> {
         Err(_) => Err("Unable to parse magic number chunk")
       }
     },
-    Err(err) => Err("Unable to load file")
+    Err(_) => Err("Unable to load file")
   }
 }
 
