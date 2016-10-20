@@ -1,30 +1,31 @@
-use std::borrow::Cow;
 use std::fs::File;
-use std::io::{Bytes, Read};
-use std::iter::Take;
+use std::io::Read;
+use nom::IResult::Done;
 
-const MAGIC_NUMBER: &'static str = "VOX "; // om nom nom signficant whitespace
+#[macro_use]
+extern crate nom;
+
+const MAGIC_NUMBER: &'static str = "VOX ";
 
 #[derive(Debug, PartialEq)]
-pub struct DotVoxData;
-
-fn parse_chunk<'a>(bytes: Take<Bytes<File>>) -> Result<Cow<'a, str>, std::string::FromUtf8Error> {
-  String::from_utf8(bytes.map(|b| b.unwrap()).collect()).map(|s| s.into())
+pub struct DotVoxData {
+    version: Vec<u8>
 }
+
+named!(parse_vox_file <&[u8], DotVoxData>, chain!(
+  tag!(MAGIC_NUMBER) ~
+  version: take!(4)
+  , || DotVoxData { version: version.to_vec() })
+);
 
 pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
   match File::open(filename) {
-    Ok(f) => {
-      let iterator = f.bytes();
-      match parse_chunk(iterator.take(4)) {
-        Ok(magic_number) => {
-          if magic_number == MAGIC_NUMBER {
-            Ok(DotVoxData)
-          } else {
-            Err("Not a valid MagicaVoxel .vox file")
-          }
-        },
-        Err(_) => Err("Unable to parse magic number chunk")
+    Ok(mut f) => {
+      let mut buffer = Vec::new();
+      f.read_to_end(&mut buffer).expect("Unable to read file");
+      match parse_vox_file(&buffer) {
+        Done(_, parsed) => Ok(parsed),
+        _ => Err("Not a valid MagicaVoxel .vox file")
       }
     },
     Err(_) => Err("Unable to load file")
@@ -39,7 +40,7 @@ mod tests {
     fn valid_file_is_read_successfully() {
         let result = load("resources/placeholder.vox");
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), DotVoxData);
+        assert_eq!(result.unwrap(), DotVoxData { version: vec!(150, 0, 0, 0) });
     }
 
     #[test]
