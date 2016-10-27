@@ -63,14 +63,6 @@ named!(pub parse_size <&[u8], Size>, chain!(
   || Size { x: x, y: y, z: z }
 ));
 
-// named!(pub parse_main <&[u8], Vec<Model> >, chain!(
-//   main_size: take_u32 ~
-//   take!(4) ~
-//   take!(main_size) ~
-//   children: parse_chunks,
-//   || children)
-// );
-
 named!(parse_model <&[u8], Model>, chain!(
   size: parse_size ~
   voxels: parse_voxels,
