@@ -1,10 +1,12 @@
 [package]
 name = "dot_vox"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
 description = "A Rust library for loading MagicaVoxel .vox files."
 license = "MIT"
 keywords = ['voxel', 'MagicaVoxel', 'game', 'game-dev']
+documentation = "https://docs.rs/dot_vox"
+homepage = "https://docs.rs/dot_vox"
 repository = "https://github.com/davidedmonds/dot_vox"
 readme = "README.md"
 
