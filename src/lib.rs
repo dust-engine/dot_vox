@@ -48,14 +48,14 @@ named!(parse_voxel <&[u8], Voxel>, chain!(
   || Voxel { x: x, y: y, z: z, i: i }
 ));
 
-named!(pub parse_voxels <&[u8], Vec<Voxel> >, chain!(
+named!(parse_voxels <&[u8], Vec<Voxel> >, chain!(
   take!(12) ~
   num_voxels: take_u32 ~
   voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel),
   || voxels
 ));
 
-named!(pub parse_size <&[u8], Size>, chain!(
+named!(parse_size <&[u8], Size>, chain!(
   take!(12) ~
   x: take_u32 ~
   y: take_u32 ~
@@ -76,7 +76,7 @@ named!(parse_models <&[u8], Vec<Model> >, chain!(
   || models
 ));
 
-named!(pub parse_vox_file <&[u8], DotVoxData>, chain!(
+named!(parse_vox_file <&[u8], DotVoxData>, chain!(
   tag!(MAGIC_NUMBER) ~
   version: take_u32 ~
   take!(12) ~
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn can_parse_vox_file() {
       let bytes = include_bytes!("resources/placeholder.vox").to_vec();
-      let result = parse_vox_file(&bytes);
+      let result = super::parse_vox_file(&bytes);
       assert!(result.is_done());
       let (_, models) = result.unwrap();
       assert_eq!(models, placeholder());
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn can_parse_size_chunk() {
       let bytes = include_bytes!("resources/valid_size.bytes").to_vec();
-      let result = parse_size(&bytes);
+      let result = super::parse_size(&bytes);
       assert!(result.is_done());
       let (_, size) = result.unwrap();
       assert_eq!(size, Size { x: 24, y: 24, z: 24 } );
@@ -167,7 +167,7 @@ mod tests {
     #[test]
     fn can_parse_voxels_chunk() {
       let bytes = include_bytes!("resources/valid_voxels.bytes").to_vec();
-      let result = parse_voxels(&bytes);
+      let result = super::parse_voxels(&bytes);
       assert!(result.is_done());
       let (_, voxels) = result.unwrap();
       assert_eq!(voxels, vec!(Voxel { x: 0, y: 12, z: 22, i: 226 }, Voxel { x: 12, y: 23, z: 13, i: 226 }));
