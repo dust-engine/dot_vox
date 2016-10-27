@@ -5,3 +5,4 @@ authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
 
 [dependencies]
 nom = "^1.2.4"
+byteorder = "^0.5.3"
