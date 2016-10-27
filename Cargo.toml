@@ -2,6 +2,11 @@
 name = "dot_vox"
 version = "0.1.0"
 authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
+description = "A Rust library for loading MagicaVoxel .vox files."
+license = "MIT"
+keywords = ['voxel', 'MagicaVoxel', 'game', 'game-dev']
+repository = "https://github.com/davidedmonds/dot_vox"
+readme = "README.md"
 
 [dependencies]
 nom = "^1.2.4"
