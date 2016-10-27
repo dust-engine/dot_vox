@@ -1,3 +1,6 @@
+//! Load MagicaVoxel .vox files into Rust
+#![deny(missing_docs)]
+
 #[macro_use]
 extern crate nom;
 extern crate byteorder;
@@ -10,31 +13,50 @@ use nom::IResult::Done;
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
+/// Container for .vox file data
 #[derive(Debug, PartialEq)]
 pub struct DotVoxData {
-    version: u32,
-    models: Vec<Model>
+    /// The version number of the .vox file.
+    pub version: u32,
+    /// A Vec of all the models contained within this file.
+    pub models: Vec<Model>
 }
 
+/// A Voxel
+///
+/// A Voxel is a point in 3D space, with an indexed colour attached.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Voxel {
-  x: u8,
-  y: u8,
-  z: u8,
-  i: u8
+  /// The X coordinate for the Voxel
+  pub x: u8,
+  /// The Y coordinate for the Voxel
+  pub y: u8,
+  /// The Z coordinate for the Voxel
+  pub z: u8,
+  /// Index in the Color Pallete
+  pub i: u8
 }
 
+/// The size of a model in voxels
+///
+/// Indicates the size of the model in Voxels.
 #[derive(Debug, PartialEq)]
 pub struct Size {
-  x: u32,
-  y: u32,
-  z: u32
+  /// The width of the model in voxels.
+  pub x: u32,
+  /// The height of the model in voxels.
+  pub y: u32,
+  /// The depth of the model in voxels.
+  pub z: u32
 }
 
+/// A renderable voxel Model
 #[derive(Debug, PartialEq)]
 pub struct Model {
-  size: Size,
-  voxels: Vec<Voxel>
+  /// The size of the model in voxels
+  pub size: Size,
+  /// The voxels to be displayed.
+  pub voxels: Vec<Voxel>
 }
 
 named!(take_u32 <&[u8], u32>, map!(take!(4), LittleEndian::read_u32));
@@ -90,6 +112,40 @@ named!(parse_vox_file <&[u8], DotVoxData>, chain!(
   }
 ));
 
+/// Loads the supplied MagicaVoxel .vox file
+///
+/// Loads the supplied file, parses it, and returns a `DotVoxData` containing the version of the
+/// MagicaVoxel file, and `Vec<Model>` containing all `Model`s contained within the file.
+///
+/// # Panics
+/// No panics should occur with this library - if you find one, please raise a GitHub issue for it.
+///
+/// # Errors
+/// All errors are strings, and should describe the issue that caused them to occur.
+///
+/// # Examples
+///
+/// Loading a file:
+///
+/// ```
+/// use dot_vox::*;
+///
+/// let result = load("src/resources/placeholder.vox");
+/// assert_eq!(result.unwrap(), DotVoxData {
+///   version: 150,
+///   models: vec!(
+///     Model {
+///       size: Size { x: 2, y: 2, z: 2 },
+///       voxels: vec!(
+///         Voxel { x: 0, y: 0, z: 0, i: 226 },
+///         Voxel { x: 0, y: 1, z: 1, i: 216 },
+///         Voxel { x: 1, y: 0, z: 1, i: 236 },
+///         Voxel { x: 1, y: 1, z: 0, i: 6 }
+///       )
+///     }
+///   )
+/// });
+/// ```
 pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
   match File::open(filename) {
     Ok(mut f) => {
