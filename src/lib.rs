@@ -84,55 +84,55 @@ pub struct Model {
 named!(take_u32 <&[u8], u32>, map!(take!(4), LittleEndian::read_u32));
 named!(take_u8 <&[u8], u8>, map!(take!(1), |u: &[u8]| *u.first().unwrap()));
 
-named!(parse_voxel <&[u8], Voxel>, chain!(
-  x: take_u8 ~
-  y: take_u8 ~
-  z: take_u8 ~
-  i: take_u8,
-  || Voxel { x: x, y: y, z: z, i: i }
+named!(parse_voxel <&[u8], Voxel>, do_parse!(
+  x: take_u8 >>
+  y: take_u8 >>
+  z: take_u8 >>
+  i: take_u8 >>
+  (Voxel { x: x, y: y, z: z, i: i })
 ));
 
-named!(parse_voxels <&[u8], Vec<Voxel> >, chain!(
-  take!(12) ~
-  num_voxels: take_u32 ~
-  voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel),
-  || voxels
+named!(parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
+  take!(12)            >>
+  num_voxels: take_u32 >>
+  voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
+  (voxels)
 ));
 
-named!(parse_size <&[u8], Size>, chain!(
-  take!(12) ~
-  x: take_u32 ~
-  y: take_u32 ~
-  z: take_u32,
-  || Size { x: x, y: y, z: z }
+named!(parse_size <&[u8], Size>, do_parse!(
+  take!(12)   >>
+  x: take_u32 >>
+  y: take_u32 >>
+  z: take_u32 >>
+  (Size { x: x, y: y, z: z })
 ));
 
-named!(parse_model <&[u8], Model>, chain!(
-  size: parse_size ~
-  voxels: parse_voxels,
-  || Model { size: size, voxels: voxels }
+named!(parse_model <&[u8], Model>, do_parse!(
+  size: parse_size     >>
+  voxels: parse_voxels >>
+  (Model { size: size, voxels: voxels })
 ));
 
-named!(parse_models <&[u8], Vec<Model> >, chain!(
-  take!(12) ~
-  model_count: take_u32 ~
-  models: many_m_n!(model_count as usize, model_count as usize, parse_model),
-  || models
+named!(parse_models <&[u8], Vec<Model> >, do_parse!(
+  take!(12)             >>
+  model_count: take_u32 >>
+  models: many_m_n!(model_count as usize, model_count as usize, parse_model) >>
+  (models)
 ));
 
-named!(parse_vox_file <&[u8], DotVoxData>, chain!(
-  tag!(MAGIC_NUMBER) ~
-  version: take_u32 ~
-  take!(12) ~
+named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
+  tag!(MAGIC_NUMBER) >>
+  version: take_u32  >>
+  take!(12)          >>
   models: switch!(peek!(take!(4)),
     b"PACK" => call!(parse_models) |
     b"SIZE" => map!(call!(parse_model), |m| vec!(m))
-  ),
-  || DotVoxData {
+  ) >>
+  (DotVoxData {
     version: version,
     models: models,
     pallete: DEFAULT_PALLETE.to_vec()
-  }
+  })
 ));
 
 /// Loads the supplied MagicaVoxel .vox file
