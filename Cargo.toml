@@ -11,5 +11,5 @@ repository = "https://github.com/davidedmonds/dot_vox"
 readme = "README.md"
 
 [dependencies]
-nom = "^1.2.4"
+nom = "^2.0"
 byteorder = "^0.5.3"
