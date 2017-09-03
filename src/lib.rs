@@ -120,6 +120,12 @@ named!(parse_models <&[u8], Vec<Model> >, do_parse!(
   (models)
 ));
 
+named!(parse_pallete <&[u8], Vec<u32> >, do_parse!(
+    take!(8) >>
+    colors: many_m_n!(256, 256, take_u32) >>
+    (colors)
+));
+
 named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
   tag!(MAGIC_NUMBER) >>
   version: take_u32  >>
@@ -128,10 +134,14 @@ named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
     b"PACK" => call!(parse_models) |
     b"SIZE" => map!(call!(parse_model), |m| vec!(m))
   ) >>
+  pallete: switch!(take!(4),
+    b"RGBA" => call!(parse_pallete) |
+    _ => value!(Vec::<u32>::new())
+  ) >>
   (DotVoxData {
     version: version,
     models: models,
-    pallete: DEFAULT_PALLETE.to_vec()
+    pallete: if pallete.len() == 0 {DEFAULT_PALLETE.to_vec()} else {pallete},
   })
 ));
 
