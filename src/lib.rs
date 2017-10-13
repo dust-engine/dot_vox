@@ -18,11 +18,11 @@ pub use model::model::Model;
 pub use model::size::Size;
 pub use model::voxel::Voxel;
 
+use byteorder::{ByteOrder, LittleEndian};
+use model::voxel::parse_voxels;
+use nom::IResult::Done;
 use std::fs::File;
 use std::io::Read;
-
-use byteorder::{ByteOrder, LittleEndian};
-use nom::IResult::Done;
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
@@ -36,21 +36,6 @@ lazy_static! {
 
 named!(take_u32 <&[u8], u32>, map!(take!(4), LittleEndian::read_u32));
 named!(take_u8 <&[u8], u8>, map!(take!(1), |u: &[u8]| *u.first().unwrap()));
-
-named!(parse_voxel <&[u8], Voxel>, do_parse!(
-  x: take_u8 >>
-  y: take_u8 >>
-  z: take_u8 >>
-  i: take_u8 >>
-  (Voxel { x: x, y: y, z: z, i: i })
-));
-
-named!(parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
-  take!(12)            >>
-  num_voxels: take_u32 >>
-  voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
-  (voxels)
-));
 
 named!(parse_size <&[u8], Size>, do_parse!(
   take!(12)   >>
@@ -268,31 +253,6 @@ mod tests {
         y: 24,
         z: 24,
       }
-    );
-  }
-
-  #[test]
-  fn can_parse_voxels_chunk() {
-    let bytes = include_bytes!("resources/valid_voxels.bytes").to_vec();
-    let result = super::parse_voxels(&bytes);
-    assert!(result.is_done());
-    let (_, voxels) = result.unwrap();
-    vec::are_eq(
-      voxels,
-      vec![
-        Voxel {
-          x: 0,
-          y: 12,
-          z: 22,
-          i: 226,
-        },
-        Voxel {
-          x: 12,
-          y: 23,
-          z: 13,
-          i: 226,
-        },
-      ],
     );
   }
 
