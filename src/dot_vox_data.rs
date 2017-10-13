@@ -1,4 +1,3 @@
-use byteorder::{ByteOrder, LittleEndian};
 use Model;
 
 /// Container for .vox file data

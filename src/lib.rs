@@ -11,67 +11,29 @@ extern crate nom;
 extern crate avow;
 
 mod dot_vox_data;
+mod pallete;
 mod model;
 
 pub use dot_vox_data::DotVoxData;
 pub use model::model::Model;
 pub use model::size::Size;
 pub use model::voxel::Voxel;
+pub use pallete::DEFAULT_PALLETE;
 
 use byteorder::{ByteOrder, LittleEndian};
-use model::voxel::parse_voxels;
+
+use model::model::extract_models;
+use pallete::extract_pallete;
+
 use nom::IResult::Done;
+
 use std::fs::File;
 use std::io::Read;
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
-lazy_static! {
-  /// The default pallete used by MagicaVoxel - this is supplied if no pallete is included in the .vox file.
-  pub static ref DEFAULT_PALLETE: Vec<u32> = include_bytes!("resources/default_pallete.bytes")
-    .chunks(4)
-    .map(LittleEndian::read_u32)
-    .collect();
-}
-
 named!(take_u32 <&[u8], u32>, map!(take!(4), LittleEndian::read_u32));
 named!(take_u8 <&[u8], u8>, map!(take!(1), |u: &[u8]| *u.first().unwrap()));
-
-named!(parse_size <&[u8], Size>, do_parse!(
-  take!(12)   >>
-  x: take_u32 >>
-  y: take_u32 >>
-  z: take_u32 >>
-  (Size { x: x, y: y, z: z })
-));
-
-named!(parse_model <&[u8], Model>, do_parse!(
-  size: parse_size     >>
-  voxels: parse_voxels >>
-  (Model { size: size, voxels: voxels })
-));
-
-named!(parse_models <&[u8], Vec<Model> >, do_parse!(
-  take!(12)             >>
-  model_count: take_u32 >>
-  models: many_m_n!(model_count as usize, model_count as usize, parse_model) >>
-  (models)
-));
-
-named!(extract_models <&[u8], Vec<Model> >, switch!(peek!(take!(4)),
-    b"PACK" => call!(parse_models) |
-    b"SIZE" => map!(call!(parse_model), |m| vec!(m))
-));
-
-named!(parse_pallete <&[u8], Vec<u32> >, complete!(do_parse!(
-    take!(8) >>
-    colors: many_m_n!(256, 256, take_u32) >>
-    (colors)
-)));
-
-named!(extract_pallete <&[u8], Vec<u32> >, complete!(switch!(peek!(take!(4)),
-    b"RGBA" => call!(parse_pallete)
-)));
 
 named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
   tag!(MAGIC_NUMBER) >>
@@ -157,30 +119,10 @@ mod tests {
         Model {
           size: Size { x: 2, y: 2, z: 2 },
           voxels: vec![
-            Voxel {
-              x: 0,
-              y: 0,
-              z: 0,
-              i: 226,
-            },
-            Voxel {
-              x: 0,
-              y: 1,
-              z: 1,
-              i: 216,
-            },
-            Voxel {
-              x: 1,
-              y: 0,
-              z: 1,
-              i: 236,
-            },
-            Voxel {
-              x: 1,
-              y: 1,
-              z: 0,
-              i: 6,
-            },
+            Voxel::new(0, 0, 0, 226),
+            Voxel::new(0, 1, 1, 216),
+            Voxel::new(1, 0, 1, 236),
+            Voxel::new(1, 1, 0, 6),
           ],
         },
       ],
@@ -238,30 +180,5 @@ mod tests {
     assert!(result.is_done());
     let (_, models) = result.unwrap();
     compare_data(models, placeholder(MODIFIED_PALLETE.to_vec()));
-  }
-
-  #[test]
-  fn can_parse_size_chunk() {
-    let bytes = include_bytes!("resources/valid_size.bytes").to_vec();
-    let result = super::parse_size(&bytes);
-    assert!(result.is_done());
-    let (_, size) = result.unwrap();
-    assert_eq!(
-      size,
-      Size {
-        x: 24,
-        y: 24,
-        z: 24,
-      }
-    );
-  }
-
-  #[test]
-  fn can_parse_pallete_chunk() {
-    let bytes = include_bytes!("resources/valid_pallete.bytes").to_vec();
-    let result = super::parse_pallete(&bytes);
-    assert!(result.is_done());
-    let (_, pallete) = result.unwrap();
-    vec::are_eq(pallete, DEFAULT_PALLETE.to_vec());
   }
 }
