@@ -1,5 +1,5 @@
-use take_u32;
 use byteorder::{ByteOrder, LittleEndian};
+use nom::le_u32;
 
 lazy_static! {
   /// The default pallete used by MagicaVoxel - this is supplied if no pallete
@@ -13,7 +13,7 @@ lazy_static! {
 
 named!(parse_pallete <&[u8], Vec<u32> >, complete!(do_parse!(
     take!(8) >>
-    colors: many_m_n!(256, 256, take_u32) >>
+    colors: many_m_n!(256, 256, le_u32) >>
     (colors)
 )));
 

@@ -1,4 +1,4 @@
-use {take_u32, take_u8};
+use nom::{le_u8, le_u32};
 
 /// A Voxel
 ///
@@ -28,16 +28,16 @@ impl Voxel {
 }
 
 named!(parse_voxel <&[u8], Voxel>, do_parse!(
-  x: take_u8 >>
-  y: take_u8 >>
-  z: take_u8 >>
-  i: take_u8 >>
+  x: le_u8 >>
+  y: le_u8 >>
+  z: le_u8 >>
+  i: le_u8 >>
   (Voxel::new(x, y, z, i))
 ));
 
 named!(pub parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
   take!(12)            >>
-  num_voxels: take_u32 >>
+  num_voxels: le_u32 >>
   voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
   (voxels)
 ));

@@ -20,24 +20,20 @@ pub use model::size::Size;
 pub use model::voxel::Voxel;
 pub use pallete::DEFAULT_PALLETE;
 
-use byteorder::{ByteOrder, LittleEndian};
-
 use model::model::extract_models;
 use pallete::extract_pallete;
 
 use nom::IResult::Done;
+use nom::le_u32;
 
 use std::fs::File;
 use std::io::Read;
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
-named!(take_u32 <&[u8], u32>, map!(take!(4), LittleEndian::read_u32));
-named!(take_u8 <&[u8], u8>, map!(take!(1), |u: &[u8]| *u.first().unwrap()));
-
 named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
   tag!(MAGIC_NUMBER) >>
-  version: take_u32  >>
+  version: le_u32  >>
   take!(12)          >>
   models: extract_models >>
   pallete: opt_res!(extract_pallete) >>
@@ -103,6 +99,7 @@ mod tests {
 
   use super::*;
   use avow::vec;
+  use byteorder::{ByteOrder, LittleEndian};
 
   lazy_static! {
     /// The default pallete used by MagicaVoxel - this is supplied if no pallete is included in the .vox file.
