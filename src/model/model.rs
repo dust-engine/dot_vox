@@ -1,6 +1,7 @@
-use {Size, take_u32, Voxel};
+use {Size, Voxel};
 use model::size::parse_size;
 use model::voxel::parse_voxels;
+use nom::le_u32;
 
 /// A renderable voxel Model
 #[derive(Debug, PartialEq)]
@@ -19,7 +20,7 @@ named!(parse_model <&[u8], Model>, do_parse!(
 
 named!(parse_models <&[u8], Vec<Model> >, do_parse!(
   take!(12)             >>
-  model_count: take_u32 >>
+  model_count: le_u32 >>
   models: many_m_n!(model_count as usize, model_count as usize, parse_model) >>
   (models)
 ));

@@ -1,4 +1,4 @@
-use take_u32;
+use nom::le_u32;
 
 /// The size of a model in voxels
 ///
@@ -15,9 +15,9 @@ pub struct Size {
 
 named!(pub parse_size <&[u8], Size>, do_parse!(
   take!(12)   >>
-  x: take_u32 >>
-  y: take_u32 >>
-  z: take_u32 >>
+  x: le_u32 >>
+  y: le_u32 >>
+  z: le_u32 >>
   (Size { x: x, y: y, z: z })
 ));
 
