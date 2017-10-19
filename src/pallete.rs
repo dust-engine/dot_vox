@@ -11,14 +11,10 @@ lazy_static! {
         .collect();
 }
 
-named!(parse_pallete <&[u8], Vec<u32> >, complete!(do_parse!(
-    take!(8) >>
-    colors: many_m_n!(256, 256, le_u32) >>
+named!(pub extract_pallete <&[u8], Vec<u32> >, complete!(do_parse!(
+    take!(12) >>
+    colors: many_m_n!(255, 255, le_u32) >>
     (colors)
-)));
-
-named!(pub extract_pallete <&[u8], Vec<u32> >, complete!(switch!(peek!(take!(4)),
-    b"RGBA" => call!(parse_pallete)
 )));
 
 #[cfg(test)]
@@ -29,7 +25,7 @@ mod tests {
     #[test]
     fn can_parse_pallete_chunk() {
         let bytes = include_bytes!("resources/valid_pallete.bytes").to_vec();
-        let result = super::parse_pallete(&bytes);
+        let result = super::extract_pallete(&bytes);
         assert!(result.is_done());
         let (_, pallete) = result.unwrap();
         vec::are_eq(pallete, DEFAULT_PALLETE.to_vec());

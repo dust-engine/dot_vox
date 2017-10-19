@@ -30,7 +30,7 @@ named!(parse_models <&[u8], Vec<Model> >, do_parse!(
 
 named!(pub extract_models <&[u8], Vec<Model> >, switch!(peek!(take!(4)),
     b"PACK" => call!(parse_models) |
-    b"SIZE" => map!(call!(parse_model), |m| vec!(m))
+    b"SIZE" => map!(parse_model, |m| vec!(m))
 ));
 
 //TODO add model tests here
