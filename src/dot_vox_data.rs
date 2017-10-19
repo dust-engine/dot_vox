@@ -1,4 +1,4 @@
-use Model;
+use {Material, Model};
 
 /// Container for .vox file data
 #[derive(Debug, PartialEq)]
@@ -9,4 +9,6 @@ pub struct DotVoxData {
     pub models: Vec<Model>,
     /// A Vec containing the colour pallete as 32-bit integers
     pub pallete: Vec<u32>,
+    /// A Vec containing all the Materials set
+    pub materials: Vec<Material>,
 }

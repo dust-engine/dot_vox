@@ -10,8 +10,7 @@ Rust parser for [MagicaVoxel](https://ephtracy.github.io/) .vox files, using
 
 ## Current status
 
-Currently parses single and multiple model files with palette parsing (thanks @jice-nospam!) but
-no material support.
+Currently parses single and multiple model files with palette parsing (thanks @jice-nospam!) and material support.
 
 ## RustDoc
 
