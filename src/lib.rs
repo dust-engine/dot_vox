@@ -19,18 +19,18 @@ mod model;
 
 pub use dot_vox_data::DotVoxData;
 
-pub use material::material::Material;
+pub use material::Material;
 pub use material::material_properties::MaterialProperties;
 pub use material::material_type::MaterialType;
 
-pub use model::model::Model;
+pub use model::Model;
 pub use model::size::Size;
 pub use model::voxel::Voxel;
 
 pub use pallete::DEFAULT_PALLETE;
 
-use material::material::extract_materials;
-use model::model::extract_models;
+use material::extract_materials;
+use model::extract_models;
 use pallete::extract_pallete;
 
 use nom::IResult::Done;
@@ -52,8 +52,8 @@ named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
   (DotVoxData {
     version: version, 
     models: models, 
-    pallete: pallete.unwrap_or(DEFAULT_PALLETE.to_vec()),
-    materials: materials.unwrap_or(vec![]),
+    pallete: pallete.unwrap_or_else(|_| DEFAULT_PALLETE.to_vec()),
+    materials: materials.unwrap_or_else(|_| vec![]),
   })
 ));
 

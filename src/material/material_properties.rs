@@ -23,14 +23,14 @@ pub struct MaterialProperties {
 
 bitflags! {
     struct Properties: u32 {
-        const PLASTIC         = 0x00000001;
-        const ROUGHNESS       = 0x00000002;
-        const SPECULAR        = 0x00000004;
-        const IOR             = 0x00000008;
-        const ATTENUATION     = 0x00000010;
-        const POWER           = 0x00000020;
-        const GLOW            = 0x00000040;
-        const IS_TOTAL_POWER  = 0x00000080;
+        const PLASTIC         = 0x0000_0001;
+        const ROUGHNESS       = 0x0000_0002;
+        const SPECULAR        = 0x0000_0004;
+        const IOR             = 0x0000_0008;
+        const ATTENUATION     = 0x0000_0010;
+        const POWER           = 0x0000_0020;
+        const GLOW            = 0x0000_0040;
+        const IS_TOTAL_POWER  = 0x0000_0080;
     }
 }
 
@@ -40,7 +40,7 @@ fn properties_from_mask(bitmask: Properties, mut values: Vec<f32>) -> MaterialPr
         property: Properties,
         values: &mut Vec<T>,
     ) -> Option<T> {
-        if bitmask.contains(property) && values.len() > 0 {
+        if bitmask.contains(property) && !values.is_empty() {
             Some(values.remove(0))
         } else {
             None
