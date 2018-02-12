@@ -13,7 +13,7 @@ extern crate nom;
 extern crate avow;
 
 mod dot_vox_data;
-mod pallete;
+mod palette;
 mod material;
 mod model;
 
@@ -27,11 +27,11 @@ pub use model::Model;
 pub use model::size::Size;
 pub use model::voxel::Voxel;
 
-pub use pallete::DEFAULT_PALLETE;
+pub use palette::DEFAULT_PALETTE;
 
 use material::extract_materials;
 use model::extract_models;
-use pallete::extract_pallete;
+use palette::extract_palette;
 
 use nom::IResult::Done;
 use nom::le_u32;
@@ -46,13 +46,13 @@ named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
   version: le_u32  >>
   take!(12)          >>
   models: extract_models >>
-  pallete: opt_res!(extract_pallete) >>
+  palette: opt_res!(extract_palette) >>
   opt_res!(complete!(take!(4))) >>
   materials: opt_res!(extract_materials) >>
   (DotVoxData {
     version: version, 
     models: models, 
-    pallete: pallete.unwrap_or_else(|_| DEFAULT_PALLETE.to_vec()),
+    palette: palette.unwrap_or_else(|_| DEFAULT_PALETTE.to_vec()),
     materials: materials.unwrap_or_else(|_| vec![]),
   })
 ));
@@ -61,7 +61,7 @@ named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
 ///
 /// Loads the supplied file, parses it, and returns a `DotVoxData` containing 
 /// the version of the MagicaVoxel file, a `Vec<Model>` containing all `Model`s 
-/// contained within the file, a `Vec<u32>` containing the pallete information 
+/// contained within the file, a `Vec<u32>` containing the palette information
 /// (RGBA), and a `Vec<Material>` containing all the specialized materials.
 ///
 /// # Panics
@@ -86,14 +86,14 @@ named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
 ///     Model {
 ///       size: Size { x: 2, y: 2, z: 2 },
 ///       voxels: vec!(
-///         Voxel { x: 0, y: 0, z: 0, i: 226 },
-///         Voxel { x: 0, y: 1, z: 1, i: 216 },
-///         Voxel { x: 1, y: 0, z: 1, i: 236 },
-///         Voxel { x: 1, y: 1, z: 0, i: 6 }
+///         Voxel { x: 0, y: 0, z: 0, i: 225 },
+///         Voxel { x: 0, y: 1, z: 1, i: 215 },
+///         Voxel { x: 1, y: 0, z: 1, i: 235 },
+///         Voxel { x: 1, y: 1, z: 0, i: 5 }
 ///       )
 ///     }
 ///   ),
-///   pallete: DEFAULT_PALLETE.to_vec(),
+///   palette: DEFAULT_PALETTE.to_vec(),
 ///   materials: vec![],
 /// });
 /// ```
@@ -119,28 +119,28 @@ mod tests {
   use byteorder::{ByteOrder, LittleEndian};
 
     lazy_static! {
-    /// The default pallete used by MagicaVoxel - this is supplied if no pallete is included in the .vox file.
-    static ref MODIFIED_PALLETE: Vec<u32> = include_bytes!("resources/modified_pallete.bytes")
+    /// The default palette used by MagicaVoxel - this is supplied if no palette is included in the .vox file.
+    static ref MODIFIED_PALETTE: Vec<u32> = include_bytes!("resources/modified_palette.bytes")
       .chunks(4)
       .map(LittleEndian::read_u32)
       .collect();
   }
 
-    fn placeholder(pallete: Vec<u32>, materials: Vec<Material>) -> DotVoxData {
+    fn placeholder(palette: Vec<u32>, materials: Vec<Material>) -> DotVoxData {
         DotVoxData {
             version: 150,
             models: vec![
                 Model {
                     size: Size { x: 2, y: 2, z: 2 },
                     voxels: vec![
-                        Voxel::new(0, 0, 0, 226),
-                        Voxel::new(0, 1, 1, 216),
-                        Voxel::new(1, 0, 1, 236),
-                        Voxel::new(1, 1, 0, 6),
+                        Voxel::new(0, 0, 0, 225),
+                        Voxel::new(0, 1, 1, 215),
+                        Voxel::new(1, 0, 1, 235),
+                        Voxel::new(1, 1, 0, 5),
                     ],
                 },
             ],
-            pallete: pallete,
+            palette: palette,
             materials: materials
         }
     }
@@ -148,22 +148,22 @@ mod tests {
     fn compare_data(actual: DotVoxData, expected: DotVoxData) {
         assert_eq!(actual.version, expected.version);
         assert_eq!(actual.models, expected.models);
-        vec::are_eq(actual.pallete, expected.pallete);
+        vec::are_eq(actual.palette, expected.palette);
         vec::are_eq(actual.materials, expected.materials);
     }
 
     #[test]
-    fn valid_file_with_no_pallete_is_read_successfully() {
+    fn valid_file_with_no_palette_is_read_successfully() {
         let result = load("src/resources/placeholder.vox");
         assert!(result.is_ok());
-        compare_data(result.unwrap(), placeholder(DEFAULT_PALLETE.to_vec(), vec![]));
+        compare_data(result.unwrap(), placeholder(DEFAULT_PALETTE.to_vec(), vec![]));
     }
 
     #[test]
-    fn valid_file_with_pallete_is_read_successfully() {
-        let result = load("src/resources/placeholder-with-pallete.vox");
+    fn valid_file_with_palette_is_read_successfully() {
+        let result = load("src/resources/placeholder-with-palette.vox");
         assert!(result.is_ok());
-        compare_data(result.unwrap(), placeholder(MODIFIED_PALLETE.to_vec(), vec![]));
+        compare_data(result.unwrap(), placeholder(MODIFIED_PALETTE.to_vec(), vec![]));
     }
 
     #[test]
@@ -181,31 +181,31 @@ mod tests {
     }
 
     #[test]
-    fn can_parse_vox_file_without_pallete() {
+    fn can_parse_vox_file_without_palette() {
         let bytes = include_bytes!("resources/placeholder.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_done());
         let (_, models) = result.unwrap();
-        compare_data(models, placeholder(DEFAULT_PALLETE.to_vec(), vec![]));
+        compare_data(models, placeholder(DEFAULT_PALETTE.to_vec(), vec![]));
     }
 
     #[test]
-    fn can_parse_vox_file_with_pallete() {
-        let bytes = include_bytes!("resources/placeholder-with-pallete.vox").to_vec();
+    fn can_parse_vox_file_with_palette() {
+        let bytes = include_bytes!("resources/placeholder-with-palette.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_done());
         let (_, models) = result.unwrap();
-        compare_data(models, placeholder(MODIFIED_PALLETE.to_vec(), vec![]));
+        compare_data(models, placeholder(MODIFIED_PALETTE.to_vec(), vec![]));
     }
 
     #[test]
-    fn can_parse_vox_file_with_pallete_and_materials() {
+    fn can_parse_vox_file_with_palette_and_materials() {
         let bytes = include_bytes!("resources/placeholder-with-materials.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_done());
         let (_, voxel_data) = result.unwrap();
-        compare_data(voxel_data, placeholder(DEFAULT_PALLETE.to_vec(), vec![Material {
-            id: 216,
+        compare_data(voxel_data, placeholder(DEFAULT_PALETTE.to_vec(), vec![Material {
+            id: 215,
             material_type: MaterialType::Metal(0.694737),
             properties: MaterialProperties {
                 plastic: Some(1.0),

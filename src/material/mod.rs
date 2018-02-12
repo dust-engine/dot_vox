@@ -9,7 +9,9 @@ use nom::le_u32;
 /// A material used to render this model.
 #[derive(Debug, PartialEq)]
 pub struct Material {
-    /// The ID for this material
+    /// The index into the color palette to apply this material to. As with the indices in the color
+    /// palette used on the Voxels, this value has been corrected to match the in-memory indices of
+    /// the color palette (i.e. is 1 less than the value stored in the file).
     pub id: u8,
     /// The type of material this is
     pub material_type: MaterialType,
@@ -23,7 +25,7 @@ named!(parse_material <&[u8], Material>, do_parse!(
     material_type: parse_material_type >>
     properties: parse_material_properties >>
     (Material {
-      id: id as u8,
+      id: (id as u8).saturating_sub(1),
       material_type: material_type,
       properties: properties
     })
@@ -45,7 +47,7 @@ mod tests {
         let result = super::parse_material(&bytes);
         assert!(result.is_done());
         let (_, material) = result.unwrap();
-        assert_eq!(249, material.id);
+        assert_eq!(248, material.id);
         assert_eq!(MaterialType::Metal(1.0), material.material_type);
         assert_eq!(
             MaterialProperties {
@@ -71,7 +73,7 @@ mod tests {
             materials,
             vec![
                 Material {
-                    id: 79,
+                    id: 78,
                     material_type: MaterialType::Metal(1.0),
                     properties: MaterialProperties {
                         plastic: Some(0.0),
@@ -82,7 +84,7 @@ mod tests {
                     },
                 },
                 Material {
-                    id: 85,
+                    id: 84,
                     material_type: MaterialType::Metal(0.526316),
                     properties: MaterialProperties {
                         plastic: Some(0.0),
@@ -93,7 +95,7 @@ mod tests {
                     },
                 },
                 Material {
-                    id: 249,
+                    id: 248,
                     material_type: MaterialType::Glass(0.810526),
                     properties: MaterialProperties {
                         plastic: Some(0.0),
