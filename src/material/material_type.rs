@@ -11,6 +11,8 @@ pub enum MaterialType {
     Glass(f32),
     /// An emissive material, float indicating the degree of self-illumination.
     Emissive(f32),
+    /// An unknown material type.
+    Unknown(u32, f32),
 }
 
 impl MaterialType {
@@ -21,11 +23,7 @@ impl MaterialType {
             1 => MaterialType::Metal(weight),
             2 => MaterialType::Glass(weight),
             3 => MaterialType::Emissive(weight),
-            _ => panic!(format!(
-                "Unrecognised material type {} with weight {}",
-                material_type,
-                weight
-            )),
+            _ => MaterialType::Unknown(material_type, weight),
         }
     }
 }

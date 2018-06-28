@@ -9,8 +9,6 @@ Rust parser for [MagicaVoxel](https://ephtracy.github.io/) .vox files, using
 
 ## Current status
 
-Stable at v1.0.0.
-
 I'm not currently using MagicaVoxel, so am not keeping up with developments in the file format. If there are any
 missing features, or problems loading more recent files, please don't hesitate to open an issue. I'll try to get back
 to you within a day or two!
@@ -26,3 +24,4 @@ for doing just that!
 
 - @jice-nospam (first crack at palette parsing)
 - @expenses (bug report on palette indexing)
+- @xMAC94x (bug report on material parsing)
