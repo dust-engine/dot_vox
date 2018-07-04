@@ -26,7 +26,7 @@ mod tests {
     fn can_parse_palette_chunk() {
         let bytes = include_bytes!("resources/valid_palette.bytes").to_vec();
         let result = super::extract_palette(&bytes);
-        assert!(result.is_done());
+        assert!(result.is_ok());
         let (_, palette) = result.unwrap();
         vec::are_eq(palette, DEFAULT_PALETTE.to_vec());
     }

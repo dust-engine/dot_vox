@@ -54,7 +54,7 @@ mod tests {
     fn can_parse_voxels_chunk() {
         let bytes = include_bytes!("../resources/valid_voxels.bytes").to_vec();
         let result = super::parse_voxels(&bytes);
-        assert!(result.is_done());
+        assert!(result.is_ok());
         let (_, voxels) = result.unwrap();
         vec::are_eq(
             voxels,

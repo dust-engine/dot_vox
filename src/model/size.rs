@@ -30,7 +30,7 @@ mod tests {
     fn can_parse_size_chunk() {
         let bytes = include_bytes!("../resources/valid_size.bytes").to_vec();
         let result = super::parse_size(&bytes);
-        assert!(result.is_done());
+        assert!(result.is_ok());
         let (_, size) = result.unwrap();
         assert_eq!(
             size,
