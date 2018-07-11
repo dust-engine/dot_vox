@@ -28,14 +28,11 @@ pub use model::Model;
 pub use model::size::Size;
 pub use model::voxel::Voxel;
 
+use nom::IResult;
+
 pub use palette::DEFAULT_PALETTE;
 
-use material::extract_materials;
-use model::extract_models;
-use palette::extract_palette;
 use parser::parse_vox_file;
-
-use nom::le_u32;
 
 use std::fs::File;
 use std::io::Read;
@@ -86,8 +83,8 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
             let mut buffer = Vec::new();
             f.read_to_end(&mut buffer).expect("Unable to read file");
             match parse_vox_file(&buffer) {
-                Ok((_, parsed)) => Ok(parsed),
-                _ => Err("Not a valid MagicaVoxel .vox file"), //TODO build stack trace here
+                IResult::Done(_, parsed) => Ok(parsed),
+                _ => Err("Not a valid MagicaVoxel .vox file"),
             }
         }
         Err(_) => Err("Unable to load file"),
@@ -100,6 +97,7 @@ mod tests {
   use super::*;
   use avow::vec;
   use byteorder::{ByteOrder, LittleEndian};
+  use parser::Chunk;
 
     lazy_static! {
     /// The default palette used by MagicaVoxel - this is supplied if no palette is included in the .vox file.
@@ -124,7 +122,7 @@ mod tests {
                 },
             ],
             palette: palette,
-            materials: materials
+            materials: materials,
         }
     }
 
@@ -167,7 +165,7 @@ mod tests {
     fn can_parse_vox_file_without_palette() {
         let bytes = include_bytes!("resources/placeholder.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, models) = result.unwrap();
         compare_data(models, placeholder(DEFAULT_PALETTE.to_vec(), vec![]));
     }
@@ -176,7 +174,7 @@ mod tests {
     fn can_parse_vox_file_with_palette() {
         let bytes = include_bytes!("resources/placeholder-with-palette.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, models) = result.unwrap();
         compare_data(models, placeholder(MODIFIED_PALETTE.to_vec(), vec![]));
     }
@@ -185,7 +183,7 @@ mod tests {
     fn can_parse_vox_file_with_palette_and_materials() {
         let bytes = include_bytes!("resources/placeholder-with-materials.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, voxel_data) = result.unwrap();
         compare_data(voxel_data, placeholder(DEFAULT_PALETTE.to_vec(), vec![Material {
             id: 215,

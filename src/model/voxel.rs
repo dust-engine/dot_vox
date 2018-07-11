@@ -39,7 +39,6 @@ named!(parse_voxel <&[u8], Voxel>, do_parse!(
 ));
 
 named!(pub parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
-  take!(12)            >>
   num_voxels: le_u32 >>
   voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
   (voxels)
@@ -54,7 +53,7 @@ mod tests {
     fn can_parse_voxels_chunk() {
         let bytes = include_bytes!("../resources/valid_voxels.bytes").to_vec();
         let result = super::parse_voxels(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, voxels) = result.unwrap();
         vec::are_eq(
             voxels,

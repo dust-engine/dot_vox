@@ -42,7 +42,7 @@ mod tests {
     fn can_parse_diffuse_material_type() {
         let bytes = include_bytes!("../resources/valid_diffuse_material_type.bytes").to_vec();
         let result = super::parse_material_type(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, material_type) = result.unwrap();
         assert_eq!(MaterialType::Diffuse, material_type);
     }
@@ -51,7 +51,7 @@ mod tests {
     fn can_parse_metal_material_type() {
         let bytes = include_bytes!("../resources/valid_material_type.bytes").to_vec();
         let result = super::parse_material_type(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, material_type) = result.unwrap();
         assert_eq!(MaterialType::Metal(1.0f32), material_type);
     }

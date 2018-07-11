@@ -94,7 +94,7 @@ mod tests {
     fn can_parse_material_properties() {
         let bytes = include_bytes!("../resources/valid_material_properties.bytes").to_vec();
         let result = super::parse_material_properties(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, material_properties) = result.unwrap();
         assert_eq!(Some(0.0), material_properties.plastic);
         assert_eq!(Some(0.189474), material_properties.roughness);

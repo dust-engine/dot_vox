@@ -45,7 +45,7 @@ mod tests {
     fn can_parse_material_chunk() {
         let bytes = include_bytes!("../resources/valid_material.bytes").to_vec();
         let result = super::parse_material(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, material) = result.unwrap();
         assert_eq!(248, material.id);
         assert_eq!(MaterialType::Metal(1.0), material.material_type);
@@ -67,7 +67,7 @@ mod tests {
     fn can_parse_multiple_materials() {
         let bytes = include_bytes!("../resources/multi-materials.bytes").to_vec();
         let result = super::extract_materials(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, materials) = result.unwrap();
         vec::are_eq(
             materials,

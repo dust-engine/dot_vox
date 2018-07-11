@@ -3,7 +3,7 @@ use nom::le_u32;
 /// The size of a model in voxels
 ///
 /// Indicates the size of the model in Voxels.
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Size {
     /// The width of the model in voxels.
     pub x: u32,
@@ -14,7 +14,6 @@ pub struct Size {
 }
 
 named!(pub parse_size <&[u8], Size>, do_parse!(
-  take!(12)   >>
   x: le_u32 >>
   y: le_u32 >>
   z: le_u32 >>
@@ -30,7 +29,7 @@ mod tests {
     fn can_parse_size_chunk() {
         let bytes = include_bytes!("../resources/valid_size.bytes").to_vec();
         let result = super::parse_size(&bytes);
-        assert!(result.is_ok());
+        assert!(result.is_done());
         let (_, size) = result.unwrap();
         assert_eq!(
             size,
