@@ -40,7 +40,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                     Chunk::Pack(model) => models.push(model),
                     Chunk::Palette(palette) => palette_holder = palette,
                     Chunk::Material(material) => materials.push(material),
-                    _ => println!("Unmapped chunk {:?}", chunk)
+                    _ => error!("Unmapped chunk {:?}", chunk)
                 }
             }
 
@@ -52,7 +52,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             }
         },
         _ => DotVoxData {
-            version: version,
+            version,
             models: vec![],
             palette: vec![],
             materials: vec![],
@@ -81,7 +81,7 @@ fn build_chunk(id: &str,
             "RGBA" => build_palette_chunk(chunk_content),
             "MATT" => build_material_chunk(chunk_content),
             _ => {
-                println!("Unknown childless chunk {:?}", id);
+                error!("Unknown childless chunk {:?}", id);
                 Chunk::Unknown(id.to_owned())
             }
         }
@@ -89,12 +89,18 @@ fn build_chunk(id: &str,
         let result: IResult<&[u8], Vec<Chunk>> = many0!(child_content, parse_chunk);
         let child_chunks = match result {
             IResult::Done(_, result) => result,
-            _ => vec![]
+            result => {
+                error!("Failed to parse child chunks, due to {:?}", result);
+                vec![]
+            }
         };
         match id {
             "MAIN" => Chunk::Main(child_chunks),
             "PACK" => build_pack_chunk(chunk_content),
-            _ => Chunk::Unknown(id.to_owned())
+            _ => {
+                error!("Unknown chunk with children {:?}", id);
+                Chunk::Unknown(id.to_owned())
+            }
         }
     }
 }
