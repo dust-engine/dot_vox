@@ -1,5 +1,27 @@
 use nom::{le_u8, le_u32};
 
+/// A renderable voxel Model
+#[derive(Debug, PartialEq)]
+pub struct Model {
+    /// The size of the model in voxels
+    pub size: Size,
+    /// The voxels to be displayed.
+    pub voxels: Vec<Voxel>,
+}
+
+/// The size of a model in voxels
+///
+/// Indicates the size of the model in Voxels.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Size {
+    /// The width of the model in voxels.
+    pub x: u32,
+    /// The height of the model in voxels.
+    pub y: u32,
+    /// The depth of the model in voxels.
+    pub z: u32,
+}
+
 /// A Voxel
 ///
 /// A Voxel is a point in 3D space, with an indexed colour attached.
@@ -30,6 +52,13 @@ impl Voxel {
     }
 }
 
+named!(pub parse_size <&[u8], Size>, do_parse!(
+  x: le_u32 >>
+  y: le_u32 >>
+  z: le_u32 >>
+  (Size { x: x, y: y, z: z })
+));
+
 named!(parse_voxel <&[u8], Voxel>, do_parse!(
   x: le_u8 >>
   y: le_u8 >>
@@ -39,26 +68,7 @@ named!(parse_voxel <&[u8], Voxel>, do_parse!(
 ));
 
 named!(pub parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
-  take!(12)            >>
   num_voxels: le_u32 >>
   voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
   (voxels)
 ));
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use avow::vec;
-
-    #[test]
-    fn can_parse_voxels_chunk() {
-        let bytes = include_bytes!("../resources/valid_voxels.bytes").to_vec();
-        let result = super::parse_voxels(&bytes);
-        assert!(result.is_done());
-        let (_, voxels) = result.unwrap();
-        vec::are_eq(
-            voxels,
-            vec![Voxel::new(0, 12, 22, 225), Voxel::new(12, 23, 13, 225)],
-        );
-    }
-}

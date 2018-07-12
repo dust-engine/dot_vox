@@ -7,6 +7,8 @@ extern crate byteorder;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
+extern crate log;
+#[macro_use]
 extern crate nom;
 
 #[cfg(test)]
@@ -14,6 +16,7 @@ extern crate avow;
 
 mod dot_vox_data;
 mod palette;
+mod parser;
 mod material;
 mod model;
 
@@ -24,38 +27,17 @@ pub use material::material_properties::MaterialProperties;
 pub use material::material_type::MaterialType;
 
 pub use model::Model;
-pub use model::size::Size;
-pub use model::voxel::Voxel;
+pub use model::Size;
+pub use model::Voxel;
+
+use nom::IResult;
 
 pub use palette::DEFAULT_PALETTE;
 
-use material::extract_materials;
-use model::extract_models;
-use palette::extract_palette;
-
-use nom::IResult::Done;
-use nom::le_u32;
+use parser::parse_vox_file;
 
 use std::fs::File;
 use std::io::Read;
-
-const MAGIC_NUMBER: &'static str = "VOX ";
-
-named!(parse_vox_file <&[u8], DotVoxData>, do_parse!(
-  tag!(MAGIC_NUMBER) >>
-  version: le_u32  >>
-  take!(12)          >>
-  models: extract_models >>
-  palette: opt_res!(extract_palette) >>
-  opt_res!(complete!(take!(4))) >>
-  materials: opt_res!(extract_materials) >>
-  (DotVoxData {
-    version: version, 
-    models: models, 
-    palette: palette.unwrap_or_else(|_| DEFAULT_PALETTE.to_vec()),
-    materials: materials.unwrap_or_else(|_| vec![]),
-  })
-));
 
 /// Loads the supplied MagicaVoxel .vox file
 ///
@@ -103,7 +85,7 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
             let mut buffer = Vec::new();
             f.read_to_end(&mut buffer).expect("Unable to read file");
             match parse_vox_file(&buffer) {
-                Done(_, parsed) => Ok(parsed),
+                IResult::Done(_, parsed) => Ok(parsed),
                 _ => Err("Not a valid MagicaVoxel .vox file"),
             }
         }
@@ -119,12 +101,11 @@ mod tests {
   use byteorder::{ByteOrder, LittleEndian};
 
     lazy_static! {
-    /// The default palette used by MagicaVoxel - this is supplied if no palette is included in the .vox file.
-    static ref MODIFIED_PALETTE: Vec<u32> = include_bytes!("resources/modified_palette.bytes")
-      .chunks(4)
-      .map(LittleEndian::read_u32)
-      .collect();
-  }
+      static ref MODIFIED_PALETTE: Vec<u32> = include_bytes!("resources/modified_palette.bytes")
+        .chunks(4)
+        .map(LittleEndian::read_u32)
+        .collect();
+    }
 
     fn placeholder(palette: Vec<u32>, materials: Vec<Material>) -> DotVoxData {
         DotVoxData {
@@ -141,13 +122,17 @@ mod tests {
                 },
             ],
             palette: palette,
-            materials: materials
+            materials: materials,
         }
     }
 
     fn compare_data(actual: DotVoxData, expected: DotVoxData) {
         assert_eq!(actual.version, expected.version);
-        assert_eq!(actual.models, expected.models);
+        actual.models.into_iter().zip(expected.models.into_iter())
+            .for_each(|(actual, expected)| {
+                assert_eq!(actual.size, expected.size);
+                vec::are_eq(actual.voxels, expected.voxels);
+            });
         vec::are_eq(actual.palette, expected.palette);
         vec::are_eq(actual.materials, expected.materials);
     }
