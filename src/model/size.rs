@@ -25,19 +25,5 @@ named!(pub parse_size <&[u8], Size>, do_parse!(
 mod tests {
     use super::*;
 
-    #[test]
-    fn can_parse_size_chunk() {
-        let bytes = include_bytes!("../resources/valid_size.bytes").to_vec();
-        let result = super::parse_size(&bytes);
-        assert!(result.is_done());
-        let (_, size) = result.unwrap();
-        assert_eq!(
-            size,
-            Size {
-                x: 24,
-                y: 24,
-                z: 24,
-            }
-        );
-    }
+
 }

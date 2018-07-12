@@ -49,15 +49,5 @@ mod tests {
     use super::*;
     use avow::vec;
 
-    #[test]
-    fn can_parse_voxels_chunk() {
-        let bytes = include_bytes!("../resources/valid_voxels.bytes").to_vec();
-        let result = super::parse_voxels(&bytes);
-        assert!(result.is_done());
-        let (_, voxels) = result.unwrap();
-        vec::are_eq(
-            voxels,
-            vec![Voxel::new(0, 12, 22, 225), Voxel::new(12, 23, 13, 225)],
-        );
-    }
+
 }

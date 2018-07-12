@@ -128,7 +128,11 @@ mod tests {
 
     fn compare_data(actual: DotVoxData, expected: DotVoxData) {
         assert_eq!(actual.version, expected.version);
-        assert_eq!(actual.models, expected.models);
+        actual.models.into_iter().zip(expected.models.into_iter())
+            .for_each(|(actual, expected)| {
+                assert_eq!(actual.size, expected.size);
+                vec::are_eq(actual.voxels, expected.voxels);
+            });
         vec::are_eq(actual.palette, expected.palette);
         vec::are_eq(actual.materials, expected.materials);
     }
