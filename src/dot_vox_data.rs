@@ -1,5 +1,4 @@
 use {Material, Model};
-use parser::Chunk;
 
 /// Container for .vox file data
 #[derive(Debug, PartialEq)]

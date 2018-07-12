@@ -25,8 +25,8 @@ pub use material::material_properties::MaterialProperties;
 pub use material::material_type::MaterialType;
 
 pub use model::Model;
-pub use model::size::Size;
-pub use model::voxel::Voxel;
+pub use model::Size;
+pub use model::Voxel;
 
 use nom::IResult;
 
@@ -97,15 +97,13 @@ mod tests {
   use super::*;
   use avow::vec;
   use byteorder::{ByteOrder, LittleEndian};
-  use parser::Chunk;
 
     lazy_static! {
-    /// The default palette used by MagicaVoxel - this is supplied if no palette is included in the .vox file.
-    static ref MODIFIED_PALETTE: Vec<u32> = include_bytes!("resources/modified_palette.bytes")
-      .chunks(4)
-      .map(LittleEndian::read_u32)
-      .collect();
-  }
+      static ref MODIFIED_PALETTE: Vec<u32> = include_bytes!("resources/modified_palette.bytes")
+        .chunks(4)
+        .map(LittleEndian::read_u32)
+        .collect();
+    }
 
     fn placeholder(palette: Vec<u32>, materials: Vec<Material>) -> DotVoxData {
         DotVoxData {

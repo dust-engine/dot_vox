@@ -1,14 +1,5 @@
-use dot_vox_data::DotVoxData;
-use Model;
-use model::size;
-use model::voxel;
+use {DEFAULT_PALETTE, DotVoxData, Material, material, Model, model, palette, Size, Voxel};
 use nom::{IResult, le_u32};
-use palette;
-use palette::DEFAULT_PALETTE;
-use Size;
-use Voxel;
-use Material;
-use material;
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
@@ -132,14 +123,14 @@ fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
 }
 
 fn build_size_chunk(chunk_content: &[u8]) -> Chunk {
-    match size::parse_size(chunk_content) {
+    match model::parse_size(chunk_content) {
         IResult::Done(_, size) => Chunk::Size(size),
         _ => Chunk::Invalid(chunk_content.to_vec())
     }
 }
 
 fn build_voxel_chunk(chunk_content: &[u8]) -> Chunk {
-    match voxel::parse_voxels(chunk_content) {
+    match model::parse_voxels(chunk_content) {
         IResult::Done(_, voxels) => Chunk::Voxels(voxels),
         _ => Chunk::Invalid(chunk_content.to_vec())
     }
@@ -149,9 +140,7 @@ fn build_voxel_chunk(chunk_content: &[u8]) -> Chunk {
 mod tests {
     use super::*;
     use avow::vec;
-    use Material;
-    use MaterialType;
-    use MaterialProperties;
+    use {MaterialType, MaterialProperties};
 
     #[test]
     fn can_parse_size_chunk() {

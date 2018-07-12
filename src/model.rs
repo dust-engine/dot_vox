@@ -1,5 +1,27 @@
 use nom::{le_u8, le_u32};
 
+/// A renderable voxel Model
+#[derive(Debug, PartialEq)]
+pub struct Model {
+    /// The size of the model in voxels
+    pub size: Size,
+    /// The voxels to be displayed.
+    pub voxels: Vec<Voxel>,
+}
+
+/// The size of a model in voxels
+///
+/// Indicates the size of the model in Voxels.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Size {
+    /// The width of the model in voxels.
+    pub x: u32,
+    /// The height of the model in voxels.
+    pub y: u32,
+    /// The depth of the model in voxels.
+    pub z: u32,
+}
+
 /// A Voxel
 ///
 /// A Voxel is a point in 3D space, with an indexed colour attached.
@@ -30,6 +52,13 @@ impl Voxel {
     }
 }
 
+named!(pub parse_size <&[u8], Size>, do_parse!(
+  x: le_u32 >>
+  y: le_u32 >>
+  z: le_u32 >>
+  (Size { x: x, y: y, z: z })
+));
+
 named!(parse_voxel <&[u8], Voxel>, do_parse!(
   x: le_u8 >>
   y: le_u8 >>
@@ -43,11 +72,3 @@ named!(pub parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
   voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
   (voxels)
 ));
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use avow::vec;
-
-
-}
