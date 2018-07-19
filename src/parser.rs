@@ -1,5 +1,6 @@
-use {DEFAULT_PALETTE, DotVoxData, Material, material, Model, model, palette, Size, Voxel};
+use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
 use nom::{IResult, le_u32};
+use std::collections::HashMap;
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
@@ -14,6 +15,18 @@ pub enum Chunk {
     Unknown(String),
     Invalid(Vec<u8>),
 }
+
+/// A material used to render this model.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Material {
+    /// The Material's ID
+    pub id: u32,
+    /// Properties of the material, mapped by property name.
+    pub properties: Dict,
+}
+
+/// General dictionary
+pub type Dict = HashMap<String, String>;
 
 named!(pub parse_vox_file <&[u8], DotVoxData>, do_parse!(
   tag!(MAGIC_NUMBER) >>
@@ -36,11 +49,11 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                         if let Some(size) = size_holder {
                             models.push(Model { size, voxels })
                         }
-                    },
+                    }
                     Chunk::Pack(model) => models.push(model),
                     Chunk::Palette(palette) => palette_holder = palette,
                     Chunk::Material(material) => materials.push(material),
-                    _ => error!("Unmapped chunk {:?}", chunk)
+                    _ => debug!("Unmapped chunk {:?}", chunk)
                 }
             }
 
@@ -50,7 +63,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                 palette: palette_holder,
                 materials,
             }
-        },
+        }
         _ => DotVoxData {
             version,
             models: vec![],
@@ -79,9 +92,9 @@ fn build_chunk(id: &str,
             "XYZI" => build_voxel_chunk(chunk_content),
             "PACK" => build_pack_chunk(chunk_content),
             "RGBA" => build_palette_chunk(chunk_content),
-            "MATT" => build_material_chunk(chunk_content),
+            "MATL" => build_material_chunk(chunk_content),
             _ => {
-                error!("Unknown childless chunk {:?}", id);
+                debug!("Unknown childless chunk {:?}", id);
                 Chunk::Unknown(id.to_owned())
             }
         }
@@ -90,7 +103,7 @@ fn build_chunk(id: &str,
         let child_chunks = match result {
             IResult::Done(_, result) => result,
             result => {
-                error!("Failed to parse child chunks, due to {:?}", result);
+                debug!("Failed to parse child chunks, due to {:?}", result);
                 vec![]
             }
         };
@@ -98,7 +111,7 @@ fn build_chunk(id: &str,
             "MAIN" => Chunk::Main(child_chunks),
             "PACK" => build_pack_chunk(chunk_content),
             _ => {
-                error!("Unknown chunk with children {:?}", id);
+                debug!("Unknown chunk with children {:?}", id);
                 Chunk::Unknown(id.to_owned())
             }
         }
@@ -106,7 +119,7 @@ fn build_chunk(id: &str,
 }
 
 fn build_material_chunk(chunk_content: &[u8]) -> Chunk {
-    if let IResult::Done(_, material) = material::parse_material(chunk_content) {
+    if let IResult::Done(_, material) = parse_material(chunk_content) {
         return Chunk::Material(material);
     }
     Chunk::Invalid(chunk_content.to_vec())
@@ -114,7 +127,7 @@ fn build_material_chunk(chunk_content: &[u8]) -> Chunk {
 
 fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
     if let IResult::Done(_, palette) = palette::extract_palette(chunk_content) {
-        return Chunk::Palette(palette)
+        return Chunk::Palette(palette);
     }
     Chunk::Invalid(chunk_content.to_vec())
 }
@@ -122,7 +135,7 @@ fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
 fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
     if let IResult::Done(chunk_content, Chunk::Size(size)) = parse_chunk(chunk_content) {
         if let IResult::Done(_, Chunk::Voxels(voxels)) = parse_chunk(chunk_content) {
-            return Chunk::Pack(Model { size, voxels: voxels.to_vec() })
+            return Chunk::Pack(Model { size, voxels: voxels.to_vec() });
         }
     }
     Chunk::Invalid(chunk_content.to_vec())
@@ -142,11 +155,39 @@ fn build_voxel_chunk(chunk_content: &[u8]) -> Chunk {
     }
 }
 
+named!(pub parse_material <&[u8], Material>, do_parse!(
+    id: le_u32 >>
+    properties: parse_dict >>
+    (Material { id, properties })
+));
+
+
+named!(parse_dict <&[u8], Dict>, do_parse!(
+    count: le_u32 >>
+    entries: many_m_n!(count as usize, count as usize, parse_dict_entry) >>
+    (build_dict_from_entries(entries))
+));
+
+named!(parse_dict_entry <&[u8], (String, String)>, tuple!(parse_string, parse_string));
+
+named!(parse_string <&[u8], String>, do_parse!(
+    count: le_u32 >>
+    buffer: take_str!(count) >>
+    (buffer.to_owned())
+));
+
+fn build_dict_from_entries(entries: Vec<(String, String)>) -> Dict {
+    let mut map = HashMap::with_capacity(entries.len());
+    for (key, value) in entries {
+        map.insert(key, value);
+    }
+    map
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use avow::vec;
-    use {MaterialType, MaterialProperties};
+    use super::*;
 
     #[test]
     fn can_parse_size_chunk() {
@@ -173,10 +214,10 @@ mod tests {
         match voxels {
             Chunk::Voxels(voxels) => vec::are_eq(
                 voxels,
-                vec![Voxel::new(0, 0, 0, 225),
-                     Voxel::new(0, 1, 1, 215),
-                     Voxel::new(1, 0, 1, 235),
-                     Voxel::new(1, 1, 0, 5),
+                vec![Voxel { x: 0, y: 0, z: 0, i: 225 },
+                     Voxel { x: 0, y: 1, z: 1, i: 215 },
+                     Voxel { x: 1, y: 0, z: 1, i: 235 },
+                     Voxel { x: 1, y: 1, z: 0, i: 5 },
                 ],
             ),
             chunk => panic!("Expecting Voxel chunk, got {:?}", chunk)
@@ -196,76 +237,19 @@ mod tests {
     }
 
     #[test]
-    fn can_parse_material_chunk() {
+    fn can_parse_a_material_chunk() {
         let bytes = include_bytes!("resources/valid_material.bytes").to_vec();
-        let result = parse_chunk(&bytes);
-        assert!(result.is_done());
-        let (_, material) = result.unwrap();
-        match material {
-            Chunk::Material(material) => {
-                assert_eq!(248, material.id);
-                assert_eq!(MaterialType::Metal(1.0), material.material_type);
-                assert_eq!(
-                    MaterialProperties {
-                        plastic: Some(1.0),
-                        roughness: Some(0.0),
-                        specular: Some(1.0),
-                        ior: Some(0.3),
-                        power: Some(4.0),
-                        glow: Some(0.589474),
-                        ..Default::default()
-                    },
-                    material.properties
-                );
-            },
-            chunk => panic!("Expecting Material chunk, got {:?}", chunk)
-        };
+        let result = parse_material(&bytes);
+        match result {
+            IResult::Done(_, material) => {
+                assert_eq!(material.id, 0);
+                assert_eq!(material.properties.get("_type"), Some(&"_diffuse".to_owned()));
+                assert_eq!(material.properties.get("_weight"), Some(&"1".to_owned()));
+                assert_eq!(material.properties.get("_rough"), Some(&"0.1".to_owned()));
+                assert_eq!(material.properties.get("_spec"), Some(&"0.5".to_owned()));
+                assert_eq!(material.properties.get("_ior"), Some(&"0.3".to_owned()));
+            }
+            _ => panic!("Expected Done, got {:?}", result)
+        }
     }
-
-//    #[test]
-//    fn can_parse_multiple_materials() {
-//        let bytes = include_bytes!("resources/multi-materials.bytes").to_vec();
-//        let result = parse_chunk(&bytes);
-//        assert!(result.is_done());
-//        let (_, materials) = result.unwrap();
-//        vec::are_eq(
-//            materials,
-//            vec![
-//                Material {
-//                    id: 78,
-//                    material_type: MaterialType::Metal(1.0),
-//                    properties: MaterialProperties {
-//                        plastic: Some(0.0),
-//                        roughness: Some(0.1),
-//                        specular: Some(0.5),
-//                        ior: Some(0.3),
-//                        ..Default::default()
-//                    },
-//                },
-//                Material {
-//                    id: 84,
-//                    material_type: MaterialType::Metal(0.526316),
-//                    properties: MaterialProperties {
-//                        plastic: Some(0.0),
-//                        roughness: Some(0.252632),
-//                        specular: Some(0.736842),
-//                        ior: Some(0.3),
-//                        ..Default::default()
-//                    },
-//                },
-//                Material {
-//                    id: 248,
-//                    material_type: MaterialType::Glass(0.810526),
-//                    properties: MaterialProperties {
-//                        plastic: Some(0.0),
-//                        roughness: Some(0.189474),
-//                        specular: Some(0.5),
-//                        ior: Some(0.547368),
-//                        attenuation: Some(0.021053),
-//                        ..Default::default()
-//                    },
-//                },
-//            ],
-//        );
-//    }
 }

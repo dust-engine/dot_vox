@@ -40,23 +40,11 @@ pub struct Voxel {
     pub i: u8,
 }
 
-impl Voxel {
-    /// Instantiate a Voxel.
-    pub fn new(x: u8, y: u8, z: u8, i: u8) -> Voxel {
-        Voxel {
-            x: x,
-            y: y,
-            z: z,
-            i: i,
-        }
-    }
-}
-
 named!(pub parse_size <&[u8], Size>, do_parse!(
   x: le_u32 >>
   y: le_u32 >>
   z: le_u32 >>
-  (Size { x: x, y: y, z: z })
+  (Size { x, y, z })
 ));
 
 named!(parse_voxel <&[u8], Voxel>, do_parse!(
@@ -64,7 +52,7 @@ named!(parse_voxel <&[u8], Voxel>, do_parse!(
   y: le_u8 >>
   z: le_u8 >>
   i: le_u8 >>
-  (Voxel::new(x, y, z, i.saturating_sub(1)))
+  (Voxel { x, y, z, i: i.saturating_sub(1) })
 ));
 
 named!(pub parse_voxels <&[u8], Vec<Voxel> >, do_parse!(

@@ -1,9 +1,9 @@
 //! Load MagicaVoxel .vox files into Rust
 #![deny(missing_docs)]
 
-#[macro_use]
-extern crate bitflags;
 extern crate byteorder;
+#[cfg(test)]
+extern crate env_logger;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -17,14 +17,11 @@ extern crate avow;
 mod dot_vox_data;
 mod palette;
 mod parser;
-mod material;
 mod model;
 
 pub use dot_vox_data::DotVoxData;
 
-pub use material::Material;
-pub use material::material_properties::MaterialProperties;
-pub use material::material_type::MaterialType;
+pub use parser::{Dict, Material};
 
 pub use model::Model;
 pub use model::Size;
@@ -76,8 +73,21 @@ use std::io::Read;
 ///     }
 ///   ),
 ///   palette: DEFAULT_PALETTE.to_vec(),
-///   materials: vec![],
-/// });
+///   materials: (0..256).into_iter()
+///     .map(|i| Material {
+///       id: i,
+///       properties: {
+///         let mut map = Dict::new();
+///         map.insert("_ior".to_owned(), "0.3".to_owned());
+///         map.insert("_spec".to_owned(), "0.5".to_owned());
+///         map.insert("_rough".to_owned(), "0.1".to_owned());
+///         map.insert("_type".to_owned(), "_diffuse".to_owned());
+///         map.insert("_weight".to_owned(), "1".to_owned());
+///         map
+///       }
+///     })
+///     .collect(),
+///   });
 /// ```
 pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
     match File::open(filename) {
@@ -95,15 +105,23 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 
 #[cfg(test)]
 mod tests {
-
   use super::*;
   use avow::vec;
-  use byteorder::{ByteOrder, LittleEndian};
 
     lazy_static! {
-      static ref MODIFIED_PALETTE: Vec<u32> = include_bytes!("resources/modified_palette.bytes")
-        .chunks(4)
-        .map(LittleEndian::read_u32)
+      static ref DEFAULT_MATERIALS: Vec<Material> = (0..256).into_iter()
+        .map(|i| Material {
+            id: i,
+            properties: {
+                let mut map = Dict::new();
+                map.insert("_ior".to_owned(), "0.3".to_owned());
+                map.insert("_spec".to_owned(), "0.5".to_owned());
+                map.insert("_rough".to_owned(), "0.1".to_owned());
+                map.insert("_type".to_owned(), "_diffuse".to_owned());
+                map.insert("_weight".to_owned(), "1".to_owned());
+                map
+            }
+        })
         .collect();
     }
 
@@ -114,10 +132,10 @@ mod tests {
                 Model {
                     size: Size { x: 2, y: 2, z: 2 },
                     voxels: vec![
-                        Voxel::new(0, 0, 0, 225),
-                        Voxel::new(0, 1, 1, 215),
-                        Voxel::new(1, 0, 1, 235),
-                        Voxel::new(1, 1, 0, 5),
+                        Voxel { x: 0, y: 0, z: 0, i: 225 },
+                        Voxel { x: 0, y: 1, z: 1, i: 215 },
+                        Voxel { x: 1, y: 0, z: 1, i: 235 },
+                        Voxel { x: 1, y: 1, z: 0, i: 5 },
                     ],
                 },
             ],
@@ -138,17 +156,11 @@ mod tests {
     }
 
     #[test]
-    fn valid_file_with_no_palette_is_read_successfully() {
+    fn valid_file_with_palette_is_read_successfully() {
         let result = load("src/resources/placeholder.vox");
         assert!(result.is_ok());
-        compare_data(result.unwrap(), placeholder(DEFAULT_PALETTE.to_vec(), vec![]));
-    }
-
-    #[test]
-    fn valid_file_with_palette_is_read_successfully() {
-        let result = load("src/resources/placeholder-with-palette.vox");
-        assert!(result.is_ok());
-        compare_data(result.unwrap(), placeholder(MODIFIED_PALETTE.to_vec(), vec![]));
+        compare_data(result.unwrap(), placeholder(DEFAULT_PALETTE.to_vec(),
+                                                  DEFAULT_MATERIALS.to_vec()));
     }
 
     #[test]
@@ -166,39 +178,35 @@ mod tests {
     }
 
     #[test]
-    fn can_parse_vox_file_without_palette() {
+    fn can_parse_vox_file_with_palette() {
         let bytes = include_bytes!("resources/placeholder.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_done());
         let (_, models) = result.unwrap();
-        compare_data(models, placeholder(DEFAULT_PALETTE.to_vec(), vec![]));
+        compare_data(models, placeholder(DEFAULT_PALETTE.to_vec(), DEFAULT_MATERIALS.to_vec()));
     }
 
     #[test]
-    fn can_parse_vox_file_with_palette() {
-        let bytes = include_bytes!("resources/placeholder-with-palette.vox").to_vec();
-        let result = super::parse_vox_file(&bytes);
-        assert!(result.is_done());
-        let (_, models) = result.unwrap();
-        compare_data(models, placeholder(MODIFIED_PALETTE.to_vec(), vec![]));
-    }
-
-    #[test]
-    fn can_parse_vox_file_with_palette_and_materials() {
+    fn can_parse_vox_file_with_materials() {
+        let _log = env_logger::init();
         let bytes = include_bytes!("resources/placeholder-with-materials.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_done());
         let (_, voxel_data) = result.unwrap();
-        compare_data(voxel_data, placeholder(DEFAULT_PALETTE.to_vec(), vec![Material {
-            id: 215,
-            material_type: MaterialType::Metal(0.694737),
-            properties: MaterialProperties {
-                plastic: Some(1.0),
-                roughness: Some(0.389474),
-                specular: Some(0.821053),
-                ior: Some(0.3),
-                ..Default::default()
-            },
-        }]));
+        let mut materials: Vec<Material> = DEFAULT_MATERIALS.to_vec();
+        materials[216] = Material{
+            id: 216,
+            properties: {
+                let mut map = Dict::new();
+                map.insert("_ior".to_owned(), "0.3".to_owned());
+                map.insert("_spec".to_owned(), "0.821053".to_owned());
+                map.insert("_rough".to_owned(), "0.389474".to_owned());
+                map.insert("_type".to_owned(), "_metal".to_owned());
+                map.insert("_plastic".to_owned(), "1".to_owned());
+                map.insert("_weight".to_owned(), "0.694737".to_owned());
+                map
+            }
+        };
+        compare_data(voxel_data, placeholder(DEFAULT_PALETTE.to_vec(), materials));
     }
 }
