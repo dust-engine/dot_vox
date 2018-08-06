@@ -94,12 +94,68 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
         Ok(mut f) => {
             let mut buffer = Vec::new();
             f.read_to_end(&mut buffer).expect("Unable to read file");
-            match parse_vox_file(&buffer) {
-                IResult::Done(_, parsed) => Ok(parsed),
-                _ => Err("Not a valid MagicaVoxel .vox file"),
-            }
+            load_bytes(&buffer)
         }
         Err(_) => Err("Unable to load file"),
+    }
+}
+
+/// Parses the byte array as a .vox file.
+///
+/// Parses the byte array and returns a `DotVoxData` containing  the version of the MagicaVoxel
+/// file, a `Vec<Model>` containing all `Model`s contained within the file, a `Vec<u32>` containing
+/// the palette information (RGBA), and a `Vec<Material>` containing all the specialized materials.
+///
+/// # Panics
+/// No panics should occur with this library - if you find one, please raise a
+/// GitHub issue for it.
+///
+/// # Errors
+/// All errors are strings, and should describe the issue that caused them to
+/// occur.
+///
+/// # Examples
+///
+/// Reading a byte array:
+///
+/// ```
+/// use dot_vox::*;
+///
+/// let result = load_bytes(include_bytes!("resources/placeholder.vox"));
+/// assert_eq!(result.unwrap(), DotVoxData {
+///   version: 150,
+///   models: vec!(
+///     Model {
+///       size: Size { x: 2, y: 2, z: 2 },
+///       voxels: vec!(
+///         Voxel { x: 0, y: 0, z: 0, i: 225 },
+///         Voxel { x: 0, y: 1, z: 1, i: 215 },
+///         Voxel { x: 1, y: 0, z: 1, i: 235 },
+///         Voxel { x: 1, y: 1, z: 0, i: 5 }
+///       )
+///     }
+///   ),
+///   palette: DEFAULT_PALETTE.to_vec(),
+///   materials: (0..256).into_iter()
+///     .map(|i| Material {
+///       id: i,
+///       properties: {
+///         let mut map = Dict::new();
+///         map.insert("_ior".to_owned(), "0.3".to_owned());
+///         map.insert("_spec".to_owned(), "0.5".to_owned());
+///         map.insert("_rough".to_owned(), "0.1".to_owned());
+///         map.insert("_type".to_owned(), "_diffuse".to_owned());
+///         map.insert("_weight".to_owned(), "1".to_owned());
+///         map
+///       }
+///     })
+///     .collect(),
+///   });
+/// ```
+pub fn load_bytes(bytes: &[u8]) -> Result<DotVoxData, &'static str> {
+    match parse_vox_file(bytes) {
+        IResult::Done(_, parsed) => Ok(parsed),
+        _ => Err("Not a valid MagicaVoxel .vox file"),
     }
 }
 

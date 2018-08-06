@@ -1,6 +1,6 @@
 [package]
 name = "dot_vox"
-version = "3.0.0"
+version = "3.1.0"
 authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
 description = "A Rust library for loading MagicaVoxel .vox files."
 license = "MIT"
