@@ -1,5 +1,6 @@
 use byteorder::{ByteOrder, LittleEndian};
-use nom::le_u32;
+use nom::types::CompleteByteSlice;
+use ::parser::le_u32;
 
 lazy_static! {
   /// The default palette used by MagicaVoxel - this is supplied if no palette
@@ -11,4 +12,7 @@ lazy_static! {
         .collect();
 }
 
-named!(pub extract_palette <&[u8], Vec<u32> >, many1!(le_u32));
+named!(pub extract_palette <CompleteByteSlice, Vec<u32> >, do_parse!(
+    res: many_till!(le_u32, eof!()) >>
+    (res.0)
+));
