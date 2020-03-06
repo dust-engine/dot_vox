@@ -202,7 +202,11 @@ mod tests {
 
     fn compare_data(actual: DotVoxData, expected: DotVoxData) {
         assert_eq!(actual.version, expected.version);
-        actual.models.into_iter().zip(expected.models.into_iter())
+        assert_eq!(actual.models.len(), expected.models.len());
+        actual
+            .models
+            .into_iter()
+            .zip(expected.models.into_iter())
             .for_each(|(actual, expected)| {
                 assert_eq!(actual.size, expected.size);
                 vec::are_eq(actual.voxels, expected.voxels);
@@ -261,8 +265,27 @@ mod tests {
                 map.insert("_plastic".to_owned(), "1".to_owned());
                 map.insert("_weight".to_owned(), "0.694737".to_owned());
                 map
-            }
+            },
         };
         compare_data(voxel_data, placeholder(DEFAULT_PALETTE.to_vec(), materials));
+    }
+
+    fn write_and_load(data: DotVoxData) {
+        let mut buffer = Vec::new();
+        let write_result = data.write_vox(&mut buffer);
+        assert!(write_result.is_ok());
+        let load_result = load_bytes(&buffer);
+        assert!(load_result.is_ok());
+        compare_data(load_result.unwrap(), data);
+    }
+
+    #[test]
+    fn can_write_vox_format_without_palette_nor_materials() {
+        write_and_load(placeholder(Vec::new(), Vec::new()));
+    }
+
+    #[test]
+    fn can_write_vox_format_without_materials() {
+        write_and_load(placeholder(DEFAULT_PALETTE.to_vec(), Vec::new()));
     }
 }

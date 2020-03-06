@@ -10,6 +10,13 @@ pub struct Model {
     pub voxels: Vec<Voxel>,
 }
 
+impl Model {
+    /// Number of bytes when encoded in VOX format.
+    pub fn num_vox_bytes(&self) -> u32 {
+        12 + 4 * self.voxels.len() as u32
+    }
+}
+
 /// The size of a model in voxels
 ///
 /// Indicates the size of the model in Voxels.
