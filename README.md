@@ -36,3 +36,4 @@ for doing just that!
 - @jice-nospam (first crack at palette parsing)
 - @expenses (bug report on palette indexing)
 - @xMAC94x (bug report on material parsing)
+- @bonsairobo (implementation of `write_vox` functionality)
