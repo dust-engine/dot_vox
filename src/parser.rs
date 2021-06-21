@@ -1,4 +1,4 @@
-use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
+use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, scene, Size, Voxel, TransformNode, GroupNode, ShapeNode, Layer};
 use nom::IResult;
 use nom::types::CompleteByteSlice;
 use std::collections::HashMap;
@@ -15,6 +15,10 @@ pub enum Chunk {
     Pack(Model),
     Palette(Vec<u32>),
     Material(Material),
+    TransformNode(TransformNode),
+    GroupNode(GroupNode),
+    ShapeNode(ShapeNode),
+    Layer(Layer),
     Unknown(String),
     Invalid(Vec<u8>),
 }
@@ -115,6 +119,10 @@ fn build_chunk(string: String,
             "PACK" => build_pack_chunk(chunk_content),
             "RGBA" => build_palette_chunk(chunk_content),
             "MATL" => build_material_chunk(chunk_content),
+            "nTRN" => build_scene_transform_chunk(chunk_content),
+            "nGRP" => build_scene_group_chunk(chunk_content),
+            "nSHP" => build_scene_shape_chunk(chunk_content),
+            "LAYR" => build_layer_chunk(chunk_content),
             _ => {
                 debug!("Unknown childless chunk {:?}", id);
                 Chunk::Unknown(id.to_owned())
@@ -177,14 +185,41 @@ fn build_voxel_chunk(chunk_content: CompleteByteSlice) -> Chunk {
     }
 }
 
+fn build_scene_transform_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_scene_transform(chunk_content) {
+        Ok((_, transform_node)) => Chunk::TransformNode(transform_node),
+        _ => Chunk::Invalid(chunk_content.to_vec())
+    }
+}
+
+fn build_scene_group_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_scene_group(chunk_content) {
+        Ok((_, group_node)) => Chunk::GroupNode(group_node),
+        _ => Chunk::Invalid(chunk_content.to_vec())
+    }
+}
+
+fn build_scene_shape_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_scene_shape(chunk_content) {
+        Ok((_, shape_node)) => Chunk::ShapeNode(shape_node),
+        _ => Chunk::Invalid(chunk_content.to_vec())
+    }
+}
+
+fn build_layer_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_layer(chunk_content) {
+        Ok((_, layer)) => Chunk::Layer(layer),
+        _ => Chunk::Invalid(chunk_content.to_vec())
+    }
+}
+
 named!(pub parse_material <CompleteByteSlice, Material>, do_parse!(
     id: le_u32 >>
     properties: parse_dict >>
     (Material { id, properties })
 ));
 
-
-named!(parse_dict <CompleteByteSlice, Dict>, do_parse!(
+named!(pub parse_dict <CompleteByteSlice, Dict>, do_parse!(
     count: le_u32 >>
     entries: many_m_n!(count as usize, count as usize, parse_dict_entry) >>
     (build_dict_from_entries(entries))

@@ -18,6 +18,7 @@ mod dot_vox_data;
 mod palette;
 mod parser;
 mod model;
+mod scene;
 
 pub use dot_vox_data::DotVoxData;
 
@@ -26,6 +27,8 @@ pub use parser::{Dict, Material};
 pub use model::Model;
 pub use model::Size;
 pub use model::Voxel;
+
+pub use scene::*;
 
 use nom::types::CompleteByteSlice;
 
