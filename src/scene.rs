@@ -1,14 +1,13 @@
 // For some reason, the parser combinator definitions in this file won't compile without the following while in other files they work just fine:
 #![allow(missing_docs)]
 
-use {Dict};
-use ::parser::{le_u32, parse_dict};
 use nom::types::CompleteByteSlice;
+use parser::{le_i32, le_u32, parse_dict};
+use Dict;
 
 /// Node header.
 #[derive(Debug, PartialEq)]
-pub struct NodeHeader
-{
+pub struct NodeHeader {
     /// Id of this transform node
     pub id: u32,
     /// Attributes of this transform node
@@ -17,32 +16,29 @@ pub struct NodeHeader
 
 /// A model reference in a shape node.
 #[derive(Debug, PartialEq)]
-pub struct ShapeNodeModel
-{
+pub struct ShapeModel {
     /// Id of the model.
     pub model_id: u32,
-    /// Attributes of the model in this shape node (reserved; no known meaningful values).
+    /// Attributes of the model in this shape node.
     pub attributes: Dict,
 }
 
 /// Transform node.
 #[derive(Debug, PartialEq)]
-pub struct TransformNode
-{
+pub struct SceneTransform {
     /// Header
     pub header: NodeHeader,
     /// 1 single child (appear to be always either a group or shape node)
     pub child: u32,
     /// Layer ID.
-    pub layer_id: u32,
+    pub layer_id: i32,
     /// Positional Frames.
     pub frames: Vec<Dict>,
 }
 
 /// Group node.
 #[derive(Debug, PartialEq)]
-pub struct GroupNode
-{
+pub struct SceneGroup {
     /// Header
     pub header: NodeHeader,
     /// Multiple children (appear to be always transform nodes)
@@ -51,22 +47,20 @@ pub struct GroupNode
 
 /// Shape node.
 #[derive(Debug, PartialEq)]
-pub struct ShapeNode
-{
+pub struct SceneShape {
     /// Header
     pub header: NodeHeader,
     /// 1 or more models
-    pub models: Vec<ShapeNodeModel>,
+    pub models: Vec<ShapeModel>,
 }
 
 /// Layer information.
 #[derive(Debug, PartialEq)]
-pub struct Layer
-{
+pub struct Layer {
     /// id of this layer.
-    id: u32,
+    pub id: u32,
     /// Attributes of this layer
-    attributes: Dict,
+    pub attributes: Dict,
 }
 
 named!(parse_node_header <CompleteByteSlice, NodeHeader>, do_parse!(
@@ -75,39 +69,64 @@ named!(parse_node_header <CompleteByteSlice, NodeHeader>, do_parse!(
     (NodeHeader{id, attributes})
 ));
 
-named!(parse_scene_shape_model <CompleteByteSlice, ShapeNodeModel>, do_parse!(
+named!(parse_scene_shape_model <CompleteByteSlice, ShapeModel>, do_parse!(
     model_id: le_u32 >>
     attributes: parse_dict >>
-    (ShapeNodeModel{model_id, attributes})
+    (ShapeModel{model_id, attributes})
 ));
 
-named!(pub parse_scene_transform <CompleteByteSlice, TransformNode>, do_parse!(
+named!(pub parse_scene_transform <CompleteByteSlice, SceneTransform>, do_parse!(
     header: parse_node_header >>
     child: le_u32 >>
-    _ignored: le_u32 >>
-    layer_id: le_u32 >>
+    _ignored: le_i32 >>
+    layer_id: le_i32 >>
     frame_count: le_u32 >>
     frames: many_m_n!(frame_count as usize, frame_count as usize, parse_dict) >>
-    (TransformNode{header, child, layer_id, frames})
+    (SceneTransform{header, child, layer_id, frames})
 ));
 
-named!(pub parse_scene_group <CompleteByteSlice, GroupNode>, do_parse!(
+named!(pub parse_scene_group <CompleteByteSlice, SceneGroup>, do_parse!(
     header: parse_node_header >>
     child_count: le_u32 >>
     children: many_m_n!(child_count as usize, child_count as usize, le_u32) >>
-    (GroupNode{header, children})
+    (SceneGroup{header, children})
 ));
 
-named!(pub parse_scene_shape <CompleteByteSlice, ShapeNode>, do_parse!(
+named!(pub parse_scene_shape <CompleteByteSlice, SceneShape>, do_parse!(
     header: parse_node_header >>
     model_count: le_u32 >>
     models: many_m_n!(model_count as usize, model_count as usize, parse_scene_shape_model) >>
-    (ShapeNode{header, models})
+    (SceneShape{header, models})
 ));
 
 named!(pub parse_layer <CompleteByteSlice, Layer>, do_parse!(
     id: le_u32 >>
     attributes: parse_dict >>
-    _ignored: le_u32 >>
+    _ignored: le_i32 >>
     (Layer{id, attributes})
 ));
+
+/// Scene graph nodes for representing a scene in DotVoxData.
+#[derive(Debug, PartialEq)]
+pub enum SceneNode {
+    Transform {
+        /// Attributes.
+        attributes: Dict,
+        /// Transform frames.
+        frames: Vec<Dict>,
+        /// Child node of this Transform node.
+        child: u32,
+    },
+    Group {
+        /// Attributes.
+        attributes: Dict,
+        /// Child nodes
+        children: Vec<u32>,
+    },
+    Shape {
+        /// Attributes.
+        attributes: Dict,
+        /// Models.
+        models: Vec<ShapeModel>,
+    },
+}
