@@ -1,4 +1,4 @@
-use ::parser::{le_u8, le_u32};
+use nom::number::streaming::{le_u8, le_u32};
 
 /// A renderable voxel Model
 #[derive(Debug, PartialEq)]

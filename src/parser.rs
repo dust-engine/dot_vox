@@ -1,4 +1,5 @@
 use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
+use nom::number::streaming::le_u32;
 use nom::IResult;
 use std::collections::HashMap;
 use std::str;
@@ -29,19 +30,6 @@ pub struct Material {
 
 /// General dictionary
 pub type Dict = HashMap<String, String>;
-
-/// Recognizes an unsigned 1 byte integer (equivalent to take!(1)
-#[inline]
-pub fn le_u8(i: &[u8]) -> IResult<&[u8], u8> {
-    Ok((&i[1..], i[0]))
-}
-
-/// Recognizes little endian unsigned 4 bytes integer
-#[inline]
-pub fn le_u32(i: &[u8]) -> IResult<&[u8], u32> {
-    let res = ((i[3] as u32) << 24) + ((i[2] as u32) << 16) + ((i[1] as u32) << 8) + i[0] as u32;
-    Ok((&i[4..], res))
-}
 
 pub fn to_str(i: &[u8]) -> Result<String, Utf8Error> {
     let res = str::from_utf8(i)?;

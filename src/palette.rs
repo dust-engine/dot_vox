@@ -1,5 +1,5 @@
 use byteorder::{ByteOrder, LittleEndian};
-use ::parser::le_u32;
+use nom::number::streaming::le_u32;
 
 lazy_static! {
   /// The default palette used by MagicaVoxel - this is supplied if no palette
