@@ -14,7 +14,7 @@ readme = "README.md"
 byteorder = "^1.0"
 lazy_static = "^1.0"
 log = "^0.4"
-nom = "^4.1"
+nom = "^5.1"
 
 [dev-dependencies]
 avow = "0.2.0"

@@ -1,4 +1,3 @@
-use nom::types::CompleteByteSlice;
 use ::parser::{le_u8, le_u32};
 
 /// A renderable voxel Model
@@ -48,14 +47,14 @@ pub struct Voxel {
     pub i: u8,
 }
 
-named!(pub parse_size <CompleteByteSlice, Size>, do_parse!(
+named!(pub parse_size <&[u8], Size>, do_parse!(
   x: le_u32 >>
   y: le_u32 >>
   z: le_u32 >>
   (Size { x, y, z })
 ));
 
-named!(parse_voxel <CompleteByteSlice, Voxel>, do_parse!(
+named!(parse_voxel <&[u8], Voxel>, do_parse!(
   x: le_u8 >>
   y: le_u8 >>
   z: le_u8 >>
@@ -63,7 +62,7 @@ named!(parse_voxel <CompleteByteSlice, Voxel>, do_parse!(
   (Voxel { x, y, z, i: i.saturating_sub(1) })
 ));
 
-named!(pub parse_voxels <CompleteByteSlice, Vec<Voxel> >, do_parse!(
+named!(pub parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
   num_voxels: le_u32 >>
   voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
   (voxels)

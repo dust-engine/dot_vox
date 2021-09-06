@@ -1,6 +1,5 @@
 use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
 use nom::IResult;
-use nom::types::CompleteByteSlice;
 use std::collections::HashMap;
 use std::str;
 use std::str::Utf8Error;
@@ -33,23 +32,23 @@ pub type Dict = HashMap<String, String>;
 
 /// Recognizes an unsigned 1 byte integer (equivalent to take!(1)
 #[inline]
-pub fn le_u8(i: CompleteByteSlice) -> IResult<CompleteByteSlice, u8> {
-    Ok((CompleteByteSlice(&i[1..]), i[0]))
+pub fn le_u8(i: &[u8]) -> IResult<&[u8], u8> {
+    Ok((&i[1..], i[0]))
 }
 
 /// Recognizes little endian unsigned 4 bytes integer
 #[inline]
-pub fn le_u32(i: CompleteByteSlice) -> IResult<CompleteByteSlice, u32> {
+pub fn le_u32(i: &[u8]) -> IResult<&[u8], u32> {
     let res = ((i[3] as u32) << 24) + ((i[2] as u32) << 16) + ((i[1] as u32) << 8) + i[0] as u32;
-    Ok((CompleteByteSlice(&i[4..]), res))
+    Ok((&i[4..], res))
 }
 
-pub fn to_str(i: CompleteByteSlice) -> Result<String, Utf8Error> {
-    let res = str::from_utf8(i.0)?;
+pub fn to_str(i: &[u8]) -> Result<String, Utf8Error> {
+    let res = str::from_utf8(i)?;
     Ok(res.to_owned())
 }
 
-named!(pub parse_vox_file <CompleteByteSlice, DotVoxData>, do_parse!(
+named!(pub parse_vox_file <&[u8], DotVoxData>, do_parse!(
   tag!(MAGIC_NUMBER) >>
   version: le_u32 >>
   main: parse_chunk >>
@@ -94,7 +93,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
     }
 }
 
-named!(parse_chunk <CompleteByteSlice, Chunk>, do_parse!(
+named!(parse_chunk <&[u8], Chunk>, do_parse!(
     id: map_res!(take!(4), to_str) >>
     content_size: le_u32 >>
     children_size: le_u32 >>
@@ -104,9 +103,9 @@ named!(parse_chunk <CompleteByteSlice, Chunk>, do_parse!(
 ));
 
 fn build_chunk(string: String,
-               chunk_content: CompleteByteSlice,
+               chunk_content: &[u8],
                children_size: u32,
-               child_content: CompleteByteSlice) -> Chunk {
+               child_content: &[u8]) -> Chunk {
     let id = string.as_str();
     if children_size == 0 {
         match id {
@@ -121,7 +120,7 @@ fn build_chunk(string: String,
             }
         }
     } else {
-        let result: IResult<CompleteByteSlice, Vec<Chunk>> = many0!(child_content, parse_chunk);
+        let result: IResult<&[u8], Vec<Chunk>> = many0!(child_content, parse_chunk);
         let child_chunks = match result {
             Ok((_, result)) => result,
             result => {
@@ -140,21 +139,21 @@ fn build_chunk(string: String,
     }
 }
 
-fn build_material_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_material_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((_, material)) = parse_material(chunk_content) {
         return Chunk::Material(material);
     }
     Chunk::Invalid(chunk_content.to_vec())
 }
 
-fn build_palette_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((_, palette)) = palette::extract_palette(chunk_content) {
         return Chunk::Palette(palette);
     }
     Chunk::Invalid(chunk_content.to_vec())
 }
 
-fn build_pack_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((chunk_content, Chunk::Size(size))) = parse_chunk(chunk_content) {
         if let Ok((_, Chunk::Voxels(voxels))) = parse_chunk(chunk_content) {
             return Chunk::Pack(Model { size, voxels: voxels.to_vec() });
@@ -163,36 +162,36 @@ fn build_pack_chunk(chunk_content: CompleteByteSlice) -> Chunk {
     Chunk::Invalid(chunk_content.to_vec())
 }
 
-fn build_size_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_size_chunk(chunk_content: &[u8]) -> Chunk {
     match model::parse_size(chunk_content) {
         Ok((_, size)) => Chunk::Size(size),
         _ => Chunk::Invalid(chunk_content.to_vec())
     }
 }
 
-fn build_voxel_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_voxel_chunk(chunk_content: &[u8]) -> Chunk {
     match model::parse_voxels(chunk_content) {
         Ok((_, voxels)) => Chunk::Voxels(voxels),
         _ => Chunk::Invalid(chunk_content.to_vec())
     }
 }
 
-named!(pub parse_material <CompleteByteSlice, Material>, do_parse!(
+named!(pub parse_material <&[u8], Material>, do_parse!(
     id: le_u32 >>
     properties: parse_dict >>
     (Material { id, properties })
 ));
 
 
-named!(parse_dict <CompleteByteSlice, Dict>, do_parse!(
+named!(parse_dict <&[u8], Dict>, do_parse!(
     count: le_u32 >>
     entries: many_m_n!(count as usize, count as usize, parse_dict_entry) >>
     (build_dict_from_entries(entries))
 ));
 
-named!(parse_dict_entry <CompleteByteSlice, (String, String)>, tuple!(parse_string, parse_string));
+named!(parse_dict_entry <&[u8], (String, String)>, tuple!(parse_string, parse_string));
 
-named!(parse_string <CompleteByteSlice, String>, do_parse!(
+named!(parse_string <&[u8], String>, do_parse!(
     count: le_u32 >>
     buffer: map_res!(take!(count), to_str) >>
     (buffer)
@@ -214,7 +213,7 @@ mod tests {
     #[test]
     fn can_parse_size_chunk() {
         let bytes = include_bytes!("resources/valid_size.bytes").to_vec();
-        let result = parse_chunk(CompleteByteSlice(&bytes));
+        let result = parse_chunk(&bytes);
         assert!(result.is_ok());
         let (_, size) = result.unwrap();
         assert_eq!(
@@ -230,7 +229,7 @@ mod tests {
     #[test]
     fn can_parse_voxels_chunk() {
         let bytes = include_bytes!("resources/valid_voxels.bytes").to_vec();
-        let result = parse_chunk(CompleteByteSlice(&bytes));
+        let result = parse_chunk(&bytes);
         assert!(result.is_ok());
         let (_, voxels) = result.unwrap();
         match voxels {
@@ -249,7 +248,7 @@ mod tests {
     #[test]
     fn can_parse_palette_chunk() {
         let bytes = include_bytes!("resources/valid_palette.bytes").to_vec();
-        let result = parse_chunk(CompleteByteSlice(&bytes));
+        let result = parse_chunk(&bytes);
         assert!(result.is_ok());
         let (_, palette) = result.unwrap();
         match palette {
@@ -261,7 +260,7 @@ mod tests {
     #[test]
     fn can_parse_a_material_chunk() {
         let bytes = include_bytes!("resources/valid_material.bytes").to_vec();
-        let result = parse_material(CompleteByteSlice(&bytes));
+        let result = parse_material(&bytes);
         match result {
             Ok((_, material)) => {
                 assert_eq!(material.id, 0);

@@ -27,8 +27,6 @@ pub use model::Model;
 pub use model::Size;
 pub use model::Voxel;
 
-use nom::types::CompleteByteSlice;
-
 pub use palette::DEFAULT_PALETTE;
 
 use parser::parse_vox_file;
@@ -153,7 +151,7 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 ///   });
 /// ```
 pub fn load_bytes(bytes: &[u8]) -> Result<DotVoxData, &'static str> {
-    match parse_vox_file(CompleteByteSlice(bytes)) {
+    match parse_vox_file(bytes) {
         Ok((_, parsed)) => Ok(parsed),
         Err(_) => Err("Not a valid MagicaVoxel .vox file"),
     }
@@ -240,7 +238,7 @@ mod tests {
     #[test]
     fn can_parse_vox_file_with_palette() {
         let bytes = include_bytes!("resources/placeholder.vox").to_vec();
-        let result = super::parse_vox_file(CompleteByteSlice(&bytes));
+        let result = super::parse_vox_file(&bytes);
         assert!(result.is_ok());
         let (_, models) = result.unwrap();
         compare_data(models, placeholder(DEFAULT_PALETTE.to_vec(), DEFAULT_MATERIALS.to_vec()));
@@ -250,7 +248,7 @@ mod tests {
     fn can_parse_vox_file_with_materials() {
         let _log = env_logger::init();
         let bytes = include_bytes!("resources/placeholder-with-materials.vox").to_vec();
-        let result = super::parse_vox_file(CompleteByteSlice(&bytes));
+        let result = super::parse_vox_file(&bytes);
         assert!(result.is_ok());
         let (_, voxel_data) = result.unwrap();
         let mut materials: Vec<Material> = DEFAULT_MATERIALS.to_vec();

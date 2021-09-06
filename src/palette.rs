@@ -1,5 +1,4 @@
 use byteorder::{ByteOrder, LittleEndian};
-use nom::types::CompleteByteSlice;
 use ::parser::le_u32;
 
 lazy_static! {
@@ -12,7 +11,7 @@ lazy_static! {
         .collect();
 }
 
-named!(pub extract_palette <CompleteByteSlice, Vec<u32> >, do_parse!(
+named!(pub extract_palette <&[u8], Vec<u32> >, do_parse!(
     res: many_till!(le_u32, eof!()) >>
     (res.0)
 ));
