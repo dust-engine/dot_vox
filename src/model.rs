@@ -1,4 +1,7 @@
-use nom::number::streaming::{le_u8, le_u32};
+use nom::multi::count;
+use nom::number::complete::{le_u32, le_u8};
+use nom::sequence::tuple;
+use nom::IResult;
 
 /// A renderable voxel Model
 #[derive(Debug, PartialEq)]
@@ -47,23 +50,17 @@ pub struct Voxel {
     pub i: u8,
 }
 
-named!(pub parse_size <&[u8], Size>, do_parse!(
-  x: le_u32 >>
-  y: le_u32 >>
-  z: le_u32 >>
-  (Size { x, y, z })
-));
+pub fn parse_size(i: &[u8]) -> IResult<&[u8], Size> {
+    let (i, (x, y, z)) = tuple((le_u32, le_u32, le_u32))(i)?;
+    Ok((i, Size { x, y, z }))
+}
 
-named!(parse_voxel <&[u8], Voxel>, do_parse!(
-  x: le_u8 >>
-  y: le_u8 >>
-  z: le_u8 >>
-  i: le_u8 >>
-  (Voxel { x, y, z, i: i.saturating_sub(1) })
-));
+fn parse_voxel(input: &[u8]) -> IResult<&[u8], Voxel> {
+    let (input, (x, y, z, i)) = tuple((le_u8, le_u8, le_u8, le_u8))(input)?;
+    Ok((input, Voxel { x, y, z, i: i.saturating_sub(1) }))
+}
 
-named!(pub parse_voxels <&[u8], Vec<Voxel> >, do_parse!(
-  num_voxels: le_u32 >>
-  voxels: many_m_n!(num_voxels as usize, num_voxels as usize, parse_voxel) >>
-  (voxels)
-));
+pub fn parse_voxels(i: &[u8]) -> IResult<&[u8], Vec<Voxel>> {
+    let (i, n) = le_u32(i)?;
+    count(parse_voxel, n as usize)(i)
+}

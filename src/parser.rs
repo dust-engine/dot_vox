@@ -1,5 +1,9 @@
 use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
-use nom::number::streaming::le_u32;
+use nom::bytes::complete::{tag, take};
+use nom::combinator::{flat_map, map_res};
+use nom::multi::{count, many0};
+use nom::number::complete::le_u32;
+use nom::sequence::pair;
 use nom::IResult;
 use std::collections::HashMap;
 use std::str;
@@ -36,12 +40,12 @@ pub fn to_str(i: &[u8]) -> Result<String, Utf8Error> {
     Ok(res.to_owned())
 }
 
-named!(pub parse_vox_file <&[u8], DotVoxData>, do_parse!(
-  tag!(MAGIC_NUMBER) >>
-  version: le_u32 >>
-  main: parse_chunk >>
-  (map_chunk_to_data(version, main))
-));
+pub fn parse_vox_file(i: &[u8]) -> IResult<&[u8], DotVoxData> {
+    let (i, _) = tag(MAGIC_NUMBER)(i)?;
+    let (i, version) = le_u32(i)?;
+    let (i, main) = parse_chunk(i)?;
+    Ok((i, map_chunk_to_data(version, main)))
+}
 
 fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
     match main {
@@ -81,20 +85,19 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
     }
 }
 
-named!(parse_chunk <&[u8], Chunk>, do_parse!(
-    id: map_res!(take!(4), to_str) >>
-    content_size: le_u32 >>
-    children_size: le_u32 >>
-    chunk_content: take!(content_size) >>
-    child_content: take!(children_size) >>
-    (build_chunk(id, chunk_content, children_size, child_content))
-));
+fn parse_chunk(i: &[u8]) -> IResult<&[u8], Chunk> {
+    let (i, id) = map_res(take(4usize), str::from_utf8)(i)?;
+    let (i, (content_size, children_size)) = pair(le_u32, le_u32)(i)?;
+    let (i, chunk_content) = take(content_size)(i)?;
+    let (i, child_content) = take(children_size)(i)?;
+    let chunk = build_chunk(id, chunk_content, children_size, child_content);
+    Ok((i, chunk))
+}
 
-fn build_chunk(string: String,
+fn build_chunk(id: &str,
                chunk_content: &[u8],
                children_size: u32,
                child_content: &[u8]) -> Chunk {
-    let id = string.as_str();
     if children_size == 0 {
         match id {
             "SIZE" => build_size_chunk(chunk_content),
@@ -108,7 +111,7 @@ fn build_chunk(string: String,
             }
         }
     } else {
-        let result: IResult<&[u8], Vec<Chunk>> = many0!(child_content, parse_chunk);
+        let result: IResult<&[u8], Vec<Chunk>> = many0(parse_chunk)(child_content);
         let child_chunks = match result {
             Ok((_, result)) => result,
             result => {
@@ -164,26 +167,25 @@ fn build_voxel_chunk(chunk_content: &[u8]) -> Chunk {
     }
 }
 
-named!(pub parse_material <&[u8], Material>, do_parse!(
-    id: le_u32 >>
-    properties: parse_dict >>
-    (Material { id, properties })
-));
+pub fn parse_material(i: &[u8]) -> IResult<&[u8], Material> {
+    let (i, (id, properties)) = pair(le_u32, parse_dict)(i)?;
+    Ok((i, Material { id, properties }))
+}
 
+fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
+    let (i, n) = le_u32(i)?;
+    let (i, entries) = count(parse_dict_entry, n as usize)(i)?;
+    Ok((i, build_dict_from_entries(entries)))
+}
 
-named!(parse_dict <&[u8], Dict>, do_parse!(
-    count: le_u32 >>
-    entries: many_m_n!(count as usize, count as usize, parse_dict_entry) >>
-    (build_dict_from_entries(entries))
-));
+fn parse_dict_entry(i: &[u8]) -> IResult<&[u8], (String, String)> {
+    pair(parse_string, parse_string)(i)
+}
 
-named!(parse_dict_entry <&[u8], (String, String)>, tuple!(parse_string, parse_string));
-
-named!(parse_string <&[u8], String>, do_parse!(
-    count: le_u32 >>
-    buffer: map_res!(take!(count), to_str) >>
-    (buffer)
-));
+fn parse_string(i: &[u8]) -> IResult<&[u8], String> {
+    let bytes = flat_map(le_u32, take);
+    map_res(bytes, to_str)(i)
+}
 
 fn build_dict_from_entries(entries: Vec<(String, String)>) -> Dict {
     let mut map = HashMap::with_capacity(entries.len());
