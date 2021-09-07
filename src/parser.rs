@@ -1,7 +1,7 @@
 use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
 use nom::bytes::complete::{tag, take};
 use nom::combinator::{flat_map, map_res};
-use nom::multi::{count, many0};
+use nom::multi::{fold_many_m_n, many0};
 use nom::number::complete::le_u32;
 use nom::sequence::pair;
 use nom::IResult;
@@ -174,8 +174,12 @@ pub fn parse_material(i: &[u8]) -> IResult<&[u8], Material> {
 
 fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
     let (i, n) = le_u32(i)?;
-    let (i, entries) = count(parse_dict_entry, n as usize)(i)?;
-    Ok((i, build_dict_from_entries(entries)))
+    let init = move || Dict::with_capacity(n as usize);
+    let fold = |mut map: Dict, (key, value)| {
+        map.insert(key, value);
+        map
+    };
+    fold_many_m_n(n as usize, n as usize, parse_dict_entry, init, fold)(i)
 }
 
 fn parse_dict_entry(i: &[u8]) -> IResult<&[u8], (String, String)> {
@@ -185,14 +189,6 @@ fn parse_dict_entry(i: &[u8]) -> IResult<&[u8], (String, String)> {
 fn parse_string(i: &[u8]) -> IResult<&[u8], String> {
     let bytes = flat_map(le_u32, take);
     map_res(bytes, to_str)(i)
-}
-
-fn build_dict_from_entries(entries: Vec<(String, String)>) -> Dict {
-    let mut map = HashMap::with_capacity(entries.len());
-    for (key, value) in entries {
-        map.insert(key, value);
-    }
-    map
 }
 
 #[cfg(test)]
