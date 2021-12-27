@@ -1,5 +1,5 @@
 use nom::types::CompleteByteSlice;
-use ::parser::{le_u8, le_u32};
+use crate::parser::{le_u8, le_u32};
 
 /// A renderable voxel Model
 #[derive(Debug, PartialEq)]

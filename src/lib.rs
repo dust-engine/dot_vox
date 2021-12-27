@@ -19,19 +19,19 @@ mod palette;
 mod parser;
 mod model;
 
-pub use dot_vox_data::DotVoxData;
+pub use crate::dot_vox_data::DotVoxData;
 
-pub use parser::{Dict, Material};
+pub use crate::parser::{Dict, Material};
 
-pub use model::Model;
-pub use model::Size;
-pub use model::Voxel;
+pub use crate::model::Model;
+pub use crate::model::Size;
+pub use crate::model::Voxel;
 
 use nom::types::CompleteByteSlice;
 
-pub use palette::DEFAULT_PALETTE;
+pub use crate::palette::DEFAULT_PALETTE;
 
-use parser::parse_vox_file;
+use crate::parser::parse_vox_file;
 
 use std::fs::File;
 use std::io::Read;

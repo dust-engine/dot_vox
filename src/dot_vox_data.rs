@@ -1,4 +1,4 @@
-use {Material, Model};
+use crate::{Material, Model};
 
 use std::io::{self, Write};
 

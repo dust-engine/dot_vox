@@ -1,11 +1,16 @@
-use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
+use crate::{DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
 use nom::IResult;
 use nom::types::CompleteByteSlice;
-use std::collections::HashMap;
 use std::str;
 use std::str::Utf8Error;
 
-const MAGIC_NUMBER: &'static str = "VOX ";
+#[cfg(feature = "ahash")]
+use ahash::AHashMap as HashMap;
+
+#[cfg(not(feature = "ahash"))]
+use std::collections::HashMap;
+
+const MAGIC_NUMBER: &str = "VOX ";
 
 #[derive(Debug, PartialEq)]
 pub enum Chunk {

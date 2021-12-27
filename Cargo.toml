@@ -1,6 +1,7 @@
 [package]
 name = "dot_vox"
 version = "4.1.0"
+edition = "2021"
 authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
 description = "A Rust library for loading MagicaVoxel .vox files."
 license = "MIT"
@@ -10,9 +11,13 @@ homepage = "https://docs.rs/dot_vox"
 repository = "https://github.com/davidedmonds/dot_vox"
 readme = "README.md"
 
+[features]
+default = ["ahash"]
+
 [dependencies]
-byteorder = "^1.0"
-lazy_static = "^1.0"
+ahash = { version = "0.7.4", optional = true }
+byteorder = "1.4.3"
+lazy_static = "1.4.0"
 log = "^0.4"
 nom = "^4.1"
 
