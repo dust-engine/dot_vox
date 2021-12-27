@@ -38,7 +38,9 @@ impl DotVoxData {
     }
 
     fn write_main_chunk<W: Write>(
-        &self, writer: &mut W, num_children_bytes: u32
+        &self,
+        writer: &mut W,
+        num_children_bytes: u32,
     ) -> Result<(), io::Error> {
         Self::write_chunk(writer, "MAIN", &[], num_children_bytes)
     }
@@ -93,11 +95,7 @@ impl DotVoxData {
         Self::write_leaf_chunk(writer, "RGBA", &chunk)
     }
 
-    fn write_leaf_chunk<W: Write>(
-        writer: &mut W,
-        id: &str,
-        chunk: &[u8],
-    ) -> Result<(), io::Error> {
+    fn write_leaf_chunk<W: Write>(writer: &mut W, id: &str, chunk: &[u8]) -> Result<(), io::Error> {
         let num_children_bytes: u32 = 0;
 
         Self::write_chunk(writer, id, chunk, num_children_bytes)

@@ -1,6 +1,6 @@
-use crate::{DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
-use nom::IResult;
+use crate::{model, palette, DotVoxData, Model, Size, Voxel, DEFAULT_PALETTE};
 use nom::types::CompleteByteSlice;
+use nom::IResult;
 use std::str;
 use std::str::Utf8Error;
 
@@ -79,7 +79,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                     Chunk::Pack(model) => models.push(model),
                     Chunk::Palette(palette) => palette_holder = palette,
                     Chunk::Material(material) => materials.push(material),
-                    _ => debug!("Unmapped chunk {:?}", chunk)
+                    _ => debug!("Unmapped chunk {:?}", chunk),
                 }
             }
 
@@ -95,7 +95,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             models: vec![],
             palette: vec![],
             materials: vec![],
-        }
+        },
     }
 }
 
@@ -108,10 +108,12 @@ named!(parse_chunk <CompleteByteSlice, Chunk>, do_parse!(
     (build_chunk(id, chunk_content, children_size, child_content))
 ));
 
-fn build_chunk(string: String,
-               chunk_content: CompleteByteSlice,
-               children_size: u32,
-               child_content: CompleteByteSlice) -> Chunk {
+fn build_chunk(
+    string: String,
+    chunk_content: CompleteByteSlice,
+    children_size: u32,
+    child_content: CompleteByteSlice,
+) -> Chunk {
     let id = string.as_str();
     if children_size == 0 {
         match id {
@@ -162,7 +164,10 @@ fn build_palette_chunk(chunk_content: CompleteByteSlice) -> Chunk {
 fn build_pack_chunk(chunk_content: CompleteByteSlice) -> Chunk {
     if let Ok((chunk_content, Chunk::Size(size))) = parse_chunk(chunk_content) {
         if let Ok((_, Chunk::Voxels(voxels))) = parse_chunk(chunk_content) {
-            return Chunk::Pack(Model { size, voxels: voxels.to_vec() });
+            return Chunk::Pack(Model {
+                size,
+                voxels: voxels.to_vec(),
+            });
         }
     }
     Chunk::Invalid(chunk_content.to_vec())
@@ -171,14 +176,14 @@ fn build_pack_chunk(chunk_content: CompleteByteSlice) -> Chunk {
 fn build_size_chunk(chunk_content: CompleteByteSlice) -> Chunk {
     match model::parse_size(chunk_content) {
         Ok((_, size)) => Chunk::Size(size),
-        _ => Chunk::Invalid(chunk_content.to_vec())
+        _ => Chunk::Invalid(chunk_content.to_vec()),
     }
 }
 
 fn build_voxel_chunk(chunk_content: CompleteByteSlice) -> Chunk {
     match model::parse_voxels(chunk_content) {
         Ok((_, voxels)) => Chunk::Voxels(voxels),
-        _ => Chunk::Invalid(chunk_content.to_vec())
+        _ => Chunk::Invalid(chunk_content.to_vec()),
     }
 }
 
@@ -187,7 +192,6 @@ named!(pub parse_material <CompleteByteSlice, Material>, do_parse!(
     properties: parse_dict >>
     (Material { id, properties })
 ));
-
 
 named!(parse_dict <CompleteByteSlice, Dict>, do_parse!(
     count: le_u32 >>
@@ -213,8 +217,8 @@ fn build_dict_from_entries(entries: Vec<(String, String)>) -> Dict {
 
 #[cfg(test)]
 mod tests {
-    use avow::vec;
     use super::*;
+    use avow::vec;
 
     #[test]
     fn can_parse_size_chunk() {
@@ -241,13 +245,34 @@ mod tests {
         match voxels {
             Chunk::Voxels(voxels) => vec::are_eq(
                 voxels,
-                vec![Voxel { x: 0, y: 0, z: 0, i: 225 },
-                     Voxel { x: 0, y: 1, z: 1, i: 215 },
-                     Voxel { x: 1, y: 0, z: 1, i: 235 },
-                     Voxel { x: 1, y: 1, z: 0, i: 5 },
+                vec![
+                    Voxel {
+                        x: 0,
+                        y: 0,
+                        z: 0,
+                        i: 225,
+                    },
+                    Voxel {
+                        x: 0,
+                        y: 1,
+                        z: 1,
+                        i: 215,
+                    },
+                    Voxel {
+                        x: 1,
+                        y: 0,
+                        z: 1,
+                        i: 235,
+                    },
+                    Voxel {
+                        x: 1,
+                        y: 1,
+                        z: 0,
+                        i: 5,
+                    },
                 ],
             ),
-            chunk => panic!("Expecting Voxel chunk, got {:?}", chunk)
+            chunk => panic!("Expecting Voxel chunk, got {:?}", chunk),
         };
     }
 
@@ -259,7 +284,7 @@ mod tests {
         let (_, palette) = result.unwrap();
         match palette {
             Chunk::Palette(palette) => vec::are_eq(palette, DEFAULT_PALETTE.to_vec()),
-            chunk => panic!("Expecting Palette chunk, got {:?}", chunk)
+            chunk => panic!("Expecting Palette chunk, got {:?}", chunk),
         };
     }
 
@@ -270,13 +295,16 @@ mod tests {
         match result {
             Ok((_, material)) => {
                 assert_eq!(material.id, 0);
-                assert_eq!(material.properties.get("_type"), Some(&"_diffuse".to_owned()));
+                assert_eq!(
+                    material.properties.get("_type"),
+                    Some(&"_diffuse".to_owned())
+                );
                 assert_eq!(material.properties.get("_weight"), Some(&"1".to_owned()));
                 assert_eq!(material.properties.get("_rough"), Some(&"0.1".to_owned()));
                 assert_eq!(material.properties.get("_spec"), Some(&"0.5".to_owned()));
                 assert_eq!(material.properties.get("_ior"), Some(&"0.3".to_owned()));
             }
-            _ => panic!("Expected Done, got {:?}", result)
+            _ => panic!("Expected Done, got {:?}", result),
         }
     }
 }

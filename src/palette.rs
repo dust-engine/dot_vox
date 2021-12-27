@@ -1,6 +1,6 @@
+use crate::parser::le_u32;
 use byteorder::{ByteOrder, LittleEndian};
 use nom::types::CompleteByteSlice;
-use crate::parser::le_u32;
 
 lazy_static! {
   /// The default palette used by MagicaVoxel - this is supplied if no palette
