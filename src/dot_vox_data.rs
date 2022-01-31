@@ -1,6 +1,5 @@
-use {Material, Model};
-
 use std::io::{self, Write};
+use {Dict, Material, Model, SceneNode};
 
 /// Container for .vox file data
 #[derive(Debug, PartialEq)]
@@ -13,6 +12,10 @@ pub struct DotVoxData {
     pub palette: Vec<u32>,
     /// A Vec containing all the Materials set
     pub materials: Vec<Material>,
+    /// Scene. The first node in this list is always the root node.
+    pub scene: Vec<SceneNode>,
+    /// Layers. Used by scene transform nodes.
+    pub layers: Vec<Dict>,
 }
 
 impl DotVoxData {
@@ -38,7 +41,9 @@ impl DotVoxData {
     }
 
     fn write_main_chunk<W: Write>(
-        &self, writer: &mut W, num_children_bytes: u32
+        &self,
+        writer: &mut W,
+        num_children_bytes: u32,
     ) -> Result<(), io::Error> {
         Self::write_chunk(writer, "MAIN", &[], num_children_bytes)
     }
@@ -93,11 +98,7 @@ impl DotVoxData {
         Self::write_leaf_chunk(writer, "RGBA", &chunk)
     }
 
-    fn write_leaf_chunk<W: Write>(
-        writer: &mut W,
-        id: &str,
-        chunk: &[u8],
-    ) -> Result<(), io::Error> {
+    fn write_leaf_chunk<W: Write>(writer: &mut W, id: &str, chunk: &[u8]) -> Result<(), io::Error> {
         let num_children_bytes: u32 = 0;
 
         Self::write_chunk(writer, id, chunk, num_children_bytes)
