@@ -1,7 +1,7 @@
 [package]
 name = "dot_vox"
 version = "4.1.0"
-edition = "2021"
+edition = "2018"
 authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
 description = "A Rust library for loading MagicaVoxel .vox files."
 license = "MIT"
@@ -12,10 +12,10 @@ repository = "https://github.com/davidedmonds/dot_vox"
 readme = "README.md"
 
 [features]
-default = ["ahash"]
+default = [] #["ahash"]
 
 [dependencies]
-ahash = { version = "0.7.4", optional = true }
+ahash = { version = "0.7.6", optional = true }
 byteorder = "1.4.3"
 lazy_static = "1.4.0"
 log = "^0.4"
@@ -23,4 +23,4 @@ nom = "^4.1"
 
 [dev-dependencies]
 avow = "0.2.0"
-env_logger = "^0.5"
+env_logger = "^0.9"

@@ -1,4 +1,4 @@
-use crate::{Material, Model};
+use crate::{Dict, Material, Model, SceneNode};
 
 use std::io::{self, Write};
 
@@ -13,6 +13,10 @@ pub struct DotVoxData {
     pub palette: Vec<u32>,
     /// A Vec containing all the Materials set
     pub materials: Vec<Material>,
+    /// Scene. The first node in this list is always the root node.
+    pub scene: Vec<SceneNode>,
+    /// Layers. Used by scene transform nodes.
+    pub layers: Vec<Dict>,
 }
 
 impl DotVoxData {
