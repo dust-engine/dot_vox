@@ -60,6 +60,7 @@ use std::io::Read;
 ///
 /// ```
 /// use dot_vox::*;
+/// use std::collections::HashMap;
 ///
 /// let result = load("src/resources/placeholder.vox");
 /// assert_eq!(result.unwrap(), DotVoxData {
@@ -90,6 +91,21 @@ use std::io::Read;
 ///       }
 ///     })
 ///     .collect(),
+///     scene: vec![
+///       SceneNode::Transform { attributes: [].into(), frames: [HashMap::new()].into(), child: 1 },
+///       SceneNode::Group { attributes: [].into(), children: vec![2] },
+///       SceneNode::Transform { attributes: [].into(), frames: [[("_t".to_string(), "0 0 1".to_string())].into()].into(), child: 3 },
+///       SceneNode::Shape { attributes: [].into(), models: vec![ShapeModel { model_id: 0, attributes: [].into() }] }],
+///     layers: [
+///       ("_name", "0"),
+///       ("_name", "1"),
+///       ("_name", "2"),
+///       ("_name", "3"),
+///       ("_name", "4"),
+///       ("_name", "5"),
+///       ("_name", "6"),
+///       ("_name", "7"),
+///     ].map(|pair| [(pair.0.to_string(), pair.1.to_string())].into()).to_vec(),
 ///   });
 /// ```
 pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
@@ -123,6 +139,7 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 ///
 /// ```
 /// use dot_vox::*;
+/// use std::collections::HashMap;
 ///
 /// let result = load_bytes(include_bytes!("resources/placeholder.vox"));
 /// assert_eq!(result.unwrap(), DotVoxData {
@@ -153,6 +170,21 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 ///       }
 ///     })
 ///     .collect(),
+///     scene: vec![
+///       SceneNode::Transform { attributes: [].into(), frames: [HashMap::new()].into(), child: 1 },
+///       SceneNode::Group { attributes: [].into(), children: vec![2] },
+///       SceneNode::Transform { attributes: [].into(), frames: [[("_t".to_string(), "0 0 1".to_string())].into()].into(), child: 3 },
+///       SceneNode::Shape { attributes: [].into(), models: vec![ShapeModel { model_id: 0, attributes: [].into() }] }],
+///     layers: [
+///       ("_name", "0"),
+///       ("_name", "1"),
+///       ("_name", "2"),
+///       ("_name", "3"),
+///       ("_name", "4"),
+///       ("_name", "5"),
+///       ("_name", "6"),
+///       ("_name", "7"),
+///     ].map(|pair| [(pair.0.to_string(), pair.1.to_string())].into()).to_vec(),
 ///   });
 /// ```
 pub fn load_bytes(bytes: &[u8]) -> Result<DotVoxData, &'static str> {
@@ -164,6 +196,8 @@ pub fn load_bytes(bytes: &[u8]) -> Result<DotVoxData, &'static str> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use avow::vec;
 
@@ -219,6 +253,41 @@ mod tests {
             }],
             palette: palette,
             materials: materials,
+            scene: vec![
+                SceneNode::Transform {
+                    attributes: [].into(),
+                    frames: [HashMap::new()].into(),
+                    child: 1,
+                },
+                SceneNode::Group {
+                    attributes: [].into(),
+                    children: vec![2],
+                },
+                SceneNode::Transform {
+                    attributes: [].into(),
+                    frames: [[("_t".to_string(), "0 0 1".to_string())].into()].into(),
+                    child: 3,
+                },
+                SceneNode::Shape {
+                    attributes: [].into(),
+                    models: vec![ShapeModel {
+                        model_id: 0,
+                        attributes: [].into(),
+                    }],
+                },
+            ],
+            layers: [
+                ("_name", "0"),
+                ("_name", "1"),
+                ("_name", "2"),
+                ("_name", "3"),
+                ("_name", "4"),
+                ("_name", "5"),
+                ("_name", "6"),
+                ("_name", "7"),
+            ]
+            .map(|pair| [(pair.0.to_string(), pair.1.to_string())].into())
+            .to_vec(),
         }
     }
 
