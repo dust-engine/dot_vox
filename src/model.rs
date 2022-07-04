@@ -1,5 +1,5 @@
 use nom::multi::count;
-use ::parser::{le_u8, le_u32};
+use nom::number::complete::{le_u32, le_u8};
 use nom::sequence::tuple;
 use nom::IResult;
 
@@ -57,7 +57,15 @@ pub fn parse_size(i: &[u8]) -> IResult<&[u8], Size> {
 
 fn parse_voxel(input: &[u8]) -> IResult<&[u8], Voxel> {
     let (input, (x, y, z, i)) = tuple((le_u8, le_u8, le_u8, le_u8))(input)?;
-    Ok((input, Voxel { x, y, z, i: i.saturating_sub(1) }))
+    Ok((
+        input,
+        Voxel {
+            x,
+            y,
+            z,
+            i: i.saturating_sub(1),
+        },
+    ))
 }
 
 pub fn parse_voxels(i: &[u8]) -> IResult<&[u8], Vec<Voxel>> {

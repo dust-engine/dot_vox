@@ -1,9 +1,10 @@
 // For some reason, the parser combinator definitions in this file won't compile without the following while in other files they work just fine:
 #![allow(missing_docs)]
 
-use nom::types::CompleteByteSlice;
-use parser::{le_i32, le_u32, parse_dict};
-use Dict;
+use nom::number::complete::{le_i32, le_u32};
+use nom::{multi::count, sequence::pair, IResult};
+use crate::parser::parse_dict;
+use crate::Dict;
 
 /// Node header.
 #[derive(Debug, PartialEq)]
@@ -63,48 +64,60 @@ pub struct Layer {
     pub attributes: Dict,
 }
 
-named!(parse_node_header <CompleteByteSlice, NodeHeader>, do_parse!(
-    id: le_u32 >>
-    attributes: parse_dict >>
-    (NodeHeader{id, attributes})
-));
+fn parse_node_header(i: &[u8]) -> IResult<&[u8], NodeHeader> {
+    let (i, (id, attributes)) = pair(le_u32, parse_dict)(i)?;
+    Ok((i, NodeHeader { id, attributes }))
+}
 
-named!(parse_scene_shape_model <CompleteByteSlice, ShapeModel>, do_parse!(
-    model_id: le_u32 >>
-    attributes: parse_dict >>
-    (ShapeModel{model_id, attributes})
-));
+fn parse_scene_shape_model(i: &[u8]) -> IResult<&[u8], ShapeModel> {
+    let (i, (model_id, attributes)) = pair(le_u32, parse_dict)(i)?;
+    Ok((
+        i,
+        ShapeModel {
+            model_id,
+            attributes,
+        },
+    ))
+}
 
-named!(pub parse_scene_transform <CompleteByteSlice, SceneTransform>, do_parse!(
-    header: parse_node_header >>
-    child: le_u32 >>
-    _ignored: le_i32 >>
-    layer_id: le_i32 >>
-    frame_count: le_u32 >>
-    frames: many_m_n!(frame_count as usize, frame_count as usize, parse_dict) >>
-    (SceneTransform{header, child, layer_id, frames})
-));
+pub fn parse_scene_transform(i: &[u8]) -> IResult<&[u8], SceneTransform> {
+    let (i, header) = parse_node_header(i)?;
+    let (i, child) = le_u32(i)?;
+    let (i, _ignored) = le_u32(i)?;
+    let (i, layer_id) = le_i32(i)?;
+    let (i, frame_count) = le_u32(i)?;
+    let (i, frames) = count(parse_dict, frame_count as usize)(i)?;
+    Ok((
+        i,
+        SceneTransform {
+            header,
+            child,
+            layer_id,
+            frames,
+        },
+    ))
+}
 
-named!(pub parse_scene_group <CompleteByteSlice, SceneGroup>, do_parse!(
-    header: parse_node_header >>
-    child_count: le_u32 >>
-    children: many_m_n!(child_count as usize, child_count as usize, le_u32) >>
-    (SceneGroup{header, children})
-));
+pub fn parse_scene_group(i: &[u8]) -> IResult<&[u8], SceneGroup> {
+    let (i, header) = parse_node_header(i)?;
+    let (i, child_count) = le_u32(i)?;
+    let (i, children) = count(le_u32, child_count as usize)(i)?;
+    Ok((i, SceneGroup { header, children }))
+}
 
-named!(pub parse_scene_shape <CompleteByteSlice, SceneShape>, do_parse!(
-    header: parse_node_header >>
-    model_count: le_u32 >>
-    models: many_m_n!(model_count as usize, model_count as usize, parse_scene_shape_model) >>
-    (SceneShape{header, models})
-));
+pub fn parse_scene_shape(i: &[u8]) -> IResult<&[u8], SceneShape> {
+    let (i, header) = parse_node_header(i)?;
+    let (i, model_count) = le_u32(i)?;
+    let (i, models) = count(parse_scene_shape_model, model_count as usize)(i)?;
+    Ok((i, SceneShape { header, models }))
+}
 
-named!(pub parse_layer <CompleteByteSlice, Layer>, do_parse!(
-    id: le_u32 >>
-    attributes: parse_dict >>
-    _ignored: le_i32 >>
-    (Layer{id, attributes})
-));
+pub fn parse_layer(i: &[u8]) -> IResult<&[u8], Layer> {
+    let (i, id) = le_u32(i)?;
+    let (i, attributes) = parse_dict(i)?;
+    let (i, _ignored) = le_u32(i)?;
+    Ok((i, Layer { id, attributes }))
+}
 
 /// Scene graph nodes for representing a scene in DotVoxData.
 #[derive(Debug, PartialEq)]

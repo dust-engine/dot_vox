@@ -1,5 +1,5 @@
 use std::io::{self, Write};
-use {Dict, Material, Model, SceneNode};
+use crate::{Dict, Material, Model, SceneNode};
 
 /// Container for .vox file data
 #[derive(Debug, PartialEq)]

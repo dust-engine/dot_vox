@@ -1,4 +1,3 @@
-use nom::types::CompleteByteSlice;
 use nom::bytes::complete::{tag, take};
 use nom::combinator::{flat_map, map_res};
 use nom::multi::{fold_many_m_n, many0};
@@ -8,7 +7,7 @@ use nom::IResult;
 use std::collections::HashMap;
 use std::str;
 use std::str::Utf8Error;
-use {
+use crate::{
     model, palette, scene, DotVoxData, Layer, Model, SceneGroup, SceneNode, SceneShape,
     SceneTransform, Size, Voxel, DEFAULT_PALETTE,
 };
@@ -42,15 +41,6 @@ pub struct Material {
 
 /// General dictionary
 pub type Dict = HashMap<String, String>;
-
-/// Recognizes little endian signed 4 bytes integer
-#[inline]
-pub fn le_i32(i: CompleteByteSlice) -> IResult<CompleteByteSlice, i32> {
-    match le_u32(i) {
-        Ok(result) => Ok((CompleteByteSlice(&i[4..]), result.1 as i32)),
-        Err(e) => Err(e),
-    }
-}
 
 pub fn to_str(i: &[u8]) -> Result<String, Utf8Error> {
     let res = str::from_utf8(i)?;
@@ -134,12 +124,8 @@ fn parse_chunk(i: &[u8]) -> IResult<&[u8], Chunk> {
     Ok((i, chunk))
 }
 
-fn build_chunk(string: String,
-    string: String,
-               chunk_content: &[u8],
-    children_size: u32,
-               child_content: &[u8]) -> Chunk {
-) -> Chunk {
+
+fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content: &[u8]) -> Chunk {
     if children_size == 0 {
         match id {
             "SIZE" => build_size_chunk(chunk_content),
@@ -216,28 +202,28 @@ fn build_voxel_chunk(chunk_content: &[u8]) -> Chunk {
     }
 }
 
-fn build_scene_transform_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_scene_transform_chunk(chunk_content: &[u8]) -> Chunk {
     match scene::parse_scene_transform(chunk_content) {
         Ok((_, transform_node)) => Chunk::TransformNode(transform_node),
         _ => Chunk::Invalid(chunk_content.to_vec()),
     }
 }
 
-fn build_scene_group_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_scene_group_chunk(chunk_content: &[u8]) -> Chunk {
     match scene::parse_scene_group(chunk_content) {
         Ok((_, group_node)) => Chunk::GroupNode(group_node),
         _ => Chunk::Invalid(chunk_content.to_vec()),
     }
 }
 
-fn build_scene_shape_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_scene_shape_chunk(chunk_content: &[u8]) -> Chunk {
     match scene::parse_scene_shape(chunk_content) {
         Ok((_, shape_node)) => Chunk::ShapeNode(shape_node),
         _ => Chunk::Invalid(chunk_content.to_vec()),
     }
 }
 
-fn build_layer_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+fn build_layer_chunk(chunk_content: &[u8]) -> Chunk {
     match scene::parse_layer(chunk_content) {
         Ok((_, layer)) => Chunk::Layer(layer),
         _ => Chunk::Invalid(chunk_content.to_vec()),
@@ -249,7 +235,7 @@ pub fn parse_material(i: &[u8]) -> IResult<&[u8], Material> {
     Ok((i, Material { id, properties }))
 }
 
-fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
+pub(crate) fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
     let (i, n) = le_u32(i)?;
     let init = move || Dict::with_capacity(n as usize);
     let fold = |mut map: Dict, (key, value)| {
