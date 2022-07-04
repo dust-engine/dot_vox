@@ -12,11 +12,11 @@ repository = "https://github.com/davidedmonds/dot_vox"
 readme = "README.md"
 
 [dependencies]
-byteorder = "^1.0"
-lazy_static = "^1.0"
+byteorder = "^1.4.3"
+lazy_static = "^1.4"
 log = "^0.4"
 nom = { version = "^7", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 avow = "0.2.0"
-env_logger = "^0.5"
+env_logger = "^0.9"

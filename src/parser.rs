@@ -1,3 +1,7 @@
+use crate::{
+    model, palette, scene, DotVoxData, Layer, Model, SceneGroup, SceneNode, SceneShape,
+    SceneTransform, Size, Voxel, DEFAULT_PALETTE,
+};
 use nom::bytes::complete::{tag, take};
 use nom::combinator::{flat_map, map_res};
 use nom::multi::{fold_many_m_n, many0};
@@ -7,10 +11,6 @@ use nom::IResult;
 use std::collections::HashMap;
 use std::str;
 use std::str::Utf8Error;
-use crate::{
-    model, palette, scene, DotVoxData, Layer, Model, SceneGroup, SceneNode, SceneShape,
-    SceneTransform, Size, Voxel, DEFAULT_PALETTE,
-};
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
@@ -123,7 +123,6 @@ fn parse_chunk(i: &[u8]) -> IResult<&[u8], Chunk> {
     let chunk = build_chunk(id, chunk_content, children_size, child_content);
     Ok((i, chunk))
 }
-
 
 fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content: &[u8]) -> Chunk {
     if children_size == 0 {

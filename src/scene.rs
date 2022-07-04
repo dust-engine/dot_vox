@@ -1,10 +1,10 @@
 // For some reason, the parser combinator definitions in this file won't compile without the following while in other files they work just fine:
 #![allow(missing_docs)]
 
-use nom::number::complete::{le_i32, le_u32};
-use nom::{multi::count, sequence::pair, IResult};
 use crate::parser::parse_dict;
 use crate::Dict;
+use nom::number::complete::{le_i32, le_u32};
+use nom::{multi::count, sequence::pair, IResult};
 
 /// Node header.
 #[derive(Debug, PartialEq)]
