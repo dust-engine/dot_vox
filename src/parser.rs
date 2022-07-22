@@ -1,4 +1,4 @@
-use {DEFAULT_PALETTE, DotVoxData, Model, model, palette, Size, Voxel};
+use nom::types::CompleteByteSlice;
 use nom::bytes::complete::{tag, take};
 use nom::combinator::{flat_map, map_res};
 use nom::multi::{fold_many_m_n, many0};
@@ -8,6 +8,10 @@ use nom::IResult;
 use std::collections::HashMap;
 use std::str;
 use std::str::Utf8Error;
+use {
+    model, palette, scene, DotVoxData, Layer, Model, SceneGroup, SceneNode, SceneShape,
+    SceneTransform, Size, Voxel, DEFAULT_PALETTE,
+};
 
 const MAGIC_NUMBER: &'static str = "VOX ";
 
@@ -19,6 +23,10 @@ pub enum Chunk {
     Pack(Model),
     Palette(Vec<u32>),
     Material(Material),
+    TransformNode(SceneTransform),
+    GroupNode(SceneGroup),
+    ShapeNode(SceneShape),
+    Layer(Layer),
     Unknown(String),
     Invalid(Vec<u8>),
 }
@@ -34,6 +42,15 @@ pub struct Material {
 
 /// General dictionary
 pub type Dict = HashMap<String, String>;
+
+/// Recognizes little endian signed 4 bytes integer
+#[inline]
+pub fn le_i32(i: CompleteByteSlice) -> IResult<CompleteByteSlice, i32> {
+    match le_u32(i) {
+        Ok(result) => Ok((CompleteByteSlice(&i[4..]), result.1 as i32)),
+        Err(e) => Err(e),
+    }
+}
 
 pub fn to_str(i: &[u8]) -> Result<String, Utf8Error> {
     let res = str::from_utf8(i)?;
@@ -54,6 +71,9 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             let mut models: Vec<Model> = vec![];
             let mut palette_holder: Vec<u32> = DEFAULT_PALETTE.to_vec();
             let mut materials: Vec<Material> = vec![];
+            let mut scene: Vec<SceneNode> = vec![];
+            let mut layers: Vec<Dict> = vec![];
+
             for chunk in children {
                 match chunk {
                     Chunk::Size(size) => size_holder = Some(size),
@@ -65,7 +85,23 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                     Chunk::Pack(model) => models.push(model),
                     Chunk::Palette(palette) => palette_holder = palette,
                     Chunk::Material(material) => materials.push(material),
-                    _ => debug!("Unmapped chunk {:?}", chunk)
+                    Chunk::TransformNode(scene_transform) => {
+                        scene.push(SceneNode::Transform {
+                            attributes: scene_transform.header.attributes,
+                            frames: scene_transform.frames,
+                            child: scene_transform.child,
+                        });
+                    }
+                    Chunk::GroupNode(scene_group) => scene.push(SceneNode::Group {
+                        attributes: scene_group.header.attributes,
+                        children: scene_group.children,
+                    }),
+                    Chunk::ShapeNode(scene_shape) => scene.push(SceneNode::Shape {
+                        attributes: scene_shape.header.attributes,
+                        models: scene_shape.models,
+                    }),
+                    Chunk::Layer(layer) => layers.push(layer.attributes),
+                    _ => debug!("Unmapped chunk {:?}", chunk),
                 }
             }
 
@@ -74,6 +110,8 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                 models,
                 palette: palette_holder,
                 materials,
+                scene,
+                layers,
             }
         }
         _ => DotVoxData {
@@ -81,7 +119,9 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             models: vec![],
             palette: vec![],
             materials: vec![],
-        }
+            scene: vec![],
+            layers: vec![],
+        },
     }
 }
 
@@ -94,10 +134,12 @@ fn parse_chunk(i: &[u8]) -> IResult<&[u8], Chunk> {
     Ok((i, chunk))
 }
 
-fn build_chunk(id: &str,
+fn build_chunk(string: String,
+    string: String,
                chunk_content: &[u8],
-               children_size: u32,
+    children_size: u32,
                child_content: &[u8]) -> Chunk {
+) -> Chunk {
     if children_size == 0 {
         match id {
             "SIZE" => build_size_chunk(chunk_content),
@@ -105,6 +147,10 @@ fn build_chunk(id: &str,
             "PACK" => build_pack_chunk(chunk_content),
             "RGBA" => build_palette_chunk(chunk_content),
             "MATL" => build_material_chunk(chunk_content),
+            "nTRN" => build_scene_transform_chunk(chunk_content),
+            "nGRP" => build_scene_group_chunk(chunk_content),
+            "nSHP" => build_scene_shape_chunk(chunk_content),
+            "LAYR" => build_layer_chunk(chunk_content),
             _ => {
                 debug!("Unknown childless chunk {:?}", id);
                 Chunk::Unknown(id.to_owned())
@@ -147,7 +193,10 @@ fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
 fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((chunk_content, Chunk::Size(size))) = parse_chunk(chunk_content) {
         if let Ok((_, Chunk::Voxels(voxels))) = parse_chunk(chunk_content) {
-            return Chunk::Pack(Model { size, voxels: voxels.to_vec() });
+            return Chunk::Pack(Model {
+                size,
+                voxels: voxels.to_vec(),
+            });
         }
     }
     Chunk::Invalid(chunk_content.to_vec())
@@ -156,14 +205,42 @@ fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
 fn build_size_chunk(chunk_content: &[u8]) -> Chunk {
     match model::parse_size(chunk_content) {
         Ok((_, size)) => Chunk::Size(size),
-        _ => Chunk::Invalid(chunk_content.to_vec())
+        _ => Chunk::Invalid(chunk_content.to_vec()),
     }
 }
 
 fn build_voxel_chunk(chunk_content: &[u8]) -> Chunk {
     match model::parse_voxels(chunk_content) {
         Ok((_, voxels)) => Chunk::Voxels(voxels),
-        _ => Chunk::Invalid(chunk_content.to_vec())
+        _ => Chunk::Invalid(chunk_content.to_vec()),
+    }
+}
+
+fn build_scene_transform_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_scene_transform(chunk_content) {
+        Ok((_, transform_node)) => Chunk::TransformNode(transform_node),
+        _ => Chunk::Invalid(chunk_content.to_vec()),
+    }
+}
+
+fn build_scene_group_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_scene_group(chunk_content) {
+        Ok((_, group_node)) => Chunk::GroupNode(group_node),
+        _ => Chunk::Invalid(chunk_content.to_vec()),
+    }
+}
+
+fn build_scene_shape_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_scene_shape(chunk_content) {
+        Ok((_, shape_node)) => Chunk::ShapeNode(shape_node),
+        _ => Chunk::Invalid(chunk_content.to_vec()),
+    }
+}
+
+fn build_layer_chunk(chunk_content: CompleteByteSlice) -> Chunk {
+    match scene::parse_layer(chunk_content) {
+        Ok((_, layer)) => Chunk::Layer(layer),
+        _ => Chunk::Invalid(chunk_content.to_vec()),
     }
 }
 
@@ -193,8 +270,8 @@ fn parse_string(i: &[u8]) -> IResult<&[u8], String> {
 
 #[cfg(test)]
 mod tests {
-    use avow::vec;
     use super::*;
+    use avow::vec;
 
     #[test]
     fn can_parse_size_chunk() {
@@ -221,13 +298,34 @@ mod tests {
         match voxels {
             Chunk::Voxels(voxels) => vec::are_eq(
                 voxels,
-                vec![Voxel { x: 0, y: 0, z: 0, i: 225 },
-                     Voxel { x: 0, y: 1, z: 1, i: 215 },
-                     Voxel { x: 1, y: 0, z: 1, i: 235 },
-                     Voxel { x: 1, y: 1, z: 0, i: 5 },
+                vec![
+                    Voxel {
+                        x: 0,
+                        y: 0,
+                        z: 0,
+                        i: 225,
+                    },
+                    Voxel {
+                        x: 0,
+                        y: 1,
+                        z: 1,
+                        i: 215,
+                    },
+                    Voxel {
+                        x: 1,
+                        y: 0,
+                        z: 1,
+                        i: 235,
+                    },
+                    Voxel {
+                        x: 1,
+                        y: 1,
+                        z: 0,
+                        i: 5,
+                    },
                 ],
             ),
-            chunk => panic!("Expecting Voxel chunk, got {:?}", chunk)
+            chunk => panic!("Expecting Voxel chunk, got {:?}", chunk),
         };
     }
 
@@ -239,7 +337,7 @@ mod tests {
         let (_, palette) = result.unwrap();
         match palette {
             Chunk::Palette(palette) => vec::are_eq(palette, DEFAULT_PALETTE.to_vec()),
-            chunk => panic!("Expecting Palette chunk, got {:?}", chunk)
+            chunk => panic!("Expecting Palette chunk, got {:?}", chunk),
         };
     }
 
@@ -250,13 +348,16 @@ mod tests {
         match result {
             Ok((_, material)) => {
                 assert_eq!(material.id, 0);
-                assert_eq!(material.properties.get("_type"), Some(&"_diffuse".to_owned()));
+                assert_eq!(
+                    material.properties.get("_type"),
+                    Some(&"_diffuse".to_owned())
+                );
                 assert_eq!(material.properties.get("_weight"), Some(&"1".to_owned()));
                 assert_eq!(material.properties.get("_rough"), Some(&"0.1".to_owned()));
                 assert_eq!(material.properties.get("_spec"), Some(&"0.5".to_owned()));
                 assert_eq!(material.properties.get("_ior"), Some(&"0.3".to_owned()));
             }
-            _ => panic!("Expected Done, got {:?}", result)
+            _ => panic!("Expected Done, got {:?}", result),
         }
     }
 }
