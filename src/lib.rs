@@ -14,9 +14,10 @@ extern crate nom;
 extern crate avow;
 
 mod dot_vox_data;
+mod model;
 mod palette;
 mod parser;
-mod model;
+mod scene;
 
 pub use dot_vox_data::DotVoxData;
 
@@ -25,6 +26,8 @@ pub use parser::{Dict, Material};
 pub use model::Model;
 pub use model::Size;
 pub use model::Voxel;
+
+pub use scene::*;
 
 pub use palette::DEFAULT_PALETTE;
 
@@ -35,17 +38,17 @@ use std::io::Read;
 
 /// Loads the supplied MagicaVoxel .vox file
 ///
-/// Loads the supplied file, parses it, and returns a `DotVoxData` containing 
-/// the version of the MagicaVoxel file, a `Vec<Model>` containing all `Model`s 
+/// Loads the supplied file, parses it, and returns a `DotVoxData` containing
+/// the version of the MagicaVoxel file, a `Vec<Model>` containing all `Model`s
 /// contained within the file, a `Vec<u32>` containing the palette information
 /// (RGBA), and a `Vec<Material>` containing all the specialized materials.
 ///
 /// # Panics
-/// No panics should occur with this library - if you find one, please raise a 
+/// No panics should occur with this library - if you find one, please raise a
 /// GitHub issue for it.
 ///
 /// # Errors
-/// All errors are strings, and should describe the issue that caused them to 
+/// All errors are strings, and should describe the issue that caused them to
 /// occur.
 ///
 /// # Examples
@@ -158,40 +161,59 @@ pub fn load_bytes(bytes: &[u8]) -> Result<DotVoxData, &'static str> {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use avow::vec;
+    use super::*;
+    use avow::vec;
 
     lazy_static! {
-      static ref DEFAULT_MATERIALS: Vec<Material> = (0..256).into_iter()
-        .map(|i| Material {
-            id: i,
-            properties: {
-                let mut map = Dict::new();
-                map.insert("_ior".to_owned(), "0.3".to_owned());
-                map.insert("_spec".to_owned(), "0.5".to_owned());
-                map.insert("_rough".to_owned(), "0.1".to_owned());
-                map.insert("_type".to_owned(), "_diffuse".to_owned());
-                map.insert("_weight".to_owned(), "1".to_owned());
-                map
-            }
-        })
-        .collect();
+        static ref DEFAULT_MATERIALS: Vec<Material> = (0..256)
+            .into_iter()
+            .map(|i| Material {
+                id: i,
+                properties: {
+                    let mut map = Dict::new();
+                    map.insert("_ior".to_owned(), "0.3".to_owned());
+                    map.insert("_spec".to_owned(), "0.5".to_owned());
+                    map.insert("_rough".to_owned(), "0.1".to_owned());
+                    map.insert("_type".to_owned(), "_diffuse".to_owned());
+                    map.insert("_weight".to_owned(), "1".to_owned());
+                    map
+                }
+            })
+            .collect();
     }
 
     fn placeholder(palette: Vec<u32>, materials: Vec<Material>) -> DotVoxData {
         DotVoxData {
             version: 150,
-            models: vec![
-                Model {
-                    size: Size { x: 2, y: 2, z: 2 },
-                    voxels: vec![
-                        Voxel { x: 0, y: 0, z: 0, i: 225 },
-                        Voxel { x: 0, y: 1, z: 1, i: 215 },
-                        Voxel { x: 1, y: 0, z: 1, i: 235 },
-                        Voxel { x: 1, y: 1, z: 0, i: 5 },
-                    ],
-                },
-            ],
+            models: vec![Model {
+                size: Size { x: 2, y: 2, z: 2 },
+                voxels: vec![
+                    Voxel {
+                        x: 0,
+                        y: 0,
+                        z: 0,
+                        i: 225,
+                    },
+                    Voxel {
+                        x: 0,
+                        y: 1,
+                        z: 1,
+                        i: 215,
+                    },
+                    Voxel {
+                        x: 1,
+                        y: 0,
+                        z: 1,
+                        i: 235,
+                    },
+                    Voxel {
+                        x: 1,
+                        y: 1,
+                        z: 0,
+                        i: 5,
+                    },
+                ],
+            }],
             palette: palette,
             materials: materials,
         }
@@ -216,8 +238,10 @@ mod tests {
     fn valid_file_with_palette_is_read_successfully() {
         let result = load("src/resources/placeholder.vox");
         assert!(result.is_ok());
-        compare_data(result.unwrap(), placeholder(DEFAULT_PALETTE.to_vec(),
-                                                  DEFAULT_MATERIALS.to_vec()));
+        compare_data(
+            result.unwrap(),
+            placeholder(DEFAULT_PALETTE.to_vec(), DEFAULT_MATERIALS.to_vec()),
+        );
     }
 
     #[test]
@@ -240,7 +264,10 @@ mod tests {
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_ok());
         let (_, models) = result.unwrap();
-        compare_data(models, placeholder(DEFAULT_PALETTE.to_vec(), DEFAULT_MATERIALS.to_vec()));
+        compare_data(
+            models,
+            placeholder(DEFAULT_PALETTE.to_vec(), DEFAULT_MATERIALS.to_vec()),
+        );
     }
 
     #[test]
@@ -251,7 +278,7 @@ mod tests {
         assert!(result.is_ok());
         let (_, voxel_data) = result.unwrap();
         let mut materials: Vec<Material> = DEFAULT_MATERIALS.to_vec();
-        materials[216] = Material{
+        materials[216] = Material {
             id: 216,
             properties: {
                 let mut map = Dict::new();
