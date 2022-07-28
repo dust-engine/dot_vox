@@ -1,8 +1,8 @@
-use crate::{Dict, Material, Model, SceneNode};
+use crate::{Layer, Material, Model, SceneNode};
 use std::io::{self, Write};
 
 /// Container for .vox file data
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct DotVoxData {
     /// The version number of the .vox file.
     pub version: u32,
@@ -13,9 +13,9 @@ pub struct DotVoxData {
     /// A Vec containing all the Materials set
     pub materials: Vec<Material>,
     /// Scene. The first node in this list is always the root node.
-    pub scene: Vec<SceneNode>,
+    pub scenes: Vec<SceneNode>,
     /// Layers. Used by scene transform nodes.
-    pub layers: Vec<Dict>,
+    pub layers: Vec<Layer>,
 }
 
 impl DotVoxData {

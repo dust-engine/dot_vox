@@ -12,7 +12,9 @@ use std::collections::HashMap;
 use std::str;
 use std::str::Utf8Error;
 
-const MAGIC_NUMBER: &'static str = "VOX ";
+use crate::{Frame, RawLayer};
+
+const MAGIC_NUMBER: &str = "VOX ";
 
 #[derive(Debug, PartialEq)]
 pub enum Chunk {
@@ -25,18 +27,138 @@ pub enum Chunk {
     TransformNode(SceneTransform),
     GroupNode(SceneGroup),
     ShapeNode(SceneShape),
-    Layer(Layer),
+    Layer(RawLayer),
     Unknown(String),
     Invalid(Vec<u8>),
 }
 
 /// A material used to render this model.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Material {
-    /// The Material's ID
+    /// The Material's ID.  Corresponds to an index in the palette.
     pub id: u32,
     /// Properties of the material, mapped by property name.
     pub properties: Dict,
+}
+
+// TODO: maybe material schemas?
+impl Material {
+    /// The '_type' field, if present
+    pub fn material_type(&self) -> Option<&str> {
+        if let Some(t) = self.properties.get("_type") {
+            return Some(t.as_str());
+        }
+
+        None
+    }
+
+    /// The '_weight' field associated with the material
+    pub fn weight(&self) -> Option<f32> {
+        let w = self.get_f32("_weight");
+
+        if let Some(w) = w && (w < 0.0 || w > 1.0)
+        {
+            debug!("_weight observed outside of range of [0..1]: {}", w);
+        }
+
+        w
+    }
+
+    /// The '_metal' field associated with the material
+    pub fn metal(&self) -> Option<f32> {
+        self.get_f32("_metal")
+    }
+
+    /// The '_rough' field associated with the material
+    pub fn roughness(&self) -> Option<f32> {
+        self.get_f32("_rough")
+    }
+
+    /// The '_sp' field associated with the material.
+    /// The .vox specification lists this as "_spec".
+    pub fn specular(&self) -> Option<f32> {
+        self.get_f32("_sp")
+    }
+
+    /// The '_ior' field associated with the material
+    pub fn refractive_index(&self) -> Option<f32> {
+        self.get_f32("_ior")
+    }
+
+    /// The '_emit' field associated with the material
+    pub fn emit(&self) -> Option<f32> {
+        self.get_f32("_emit")
+    }
+
+    /// The '_ldr' field associated with the material
+    pub fn ldr(&self) -> Option<f32> {
+        self.get_f32("_ldr")
+    }
+
+    /// The '_ri' field associated with the material (appears to just be 1 + _ior)
+    pub fn ri(&self) -> Option<f32> {
+        self.get_f32("_ior")
+    }
+
+    /// The '_att' field associated with the material
+    pub fn att(&self) -> Option<f32> {
+        self.get_f32("_att")
+    }
+
+    /// The '_flux' field associated with the material
+    pub fn flux(&self) -> Option<f32> {
+        self.get_f32("_flux")
+    }
+
+    /// The '_g' field associated with the material
+    pub fn phase(&self) -> Option<f32> {
+        self.get_f32("_g")
+    }
+
+    /// The '_alpha' field associated with the material
+    pub fn alpha(&self) -> Option<f32> {
+        self.get_f32("_alpha")
+    }
+
+    /// The '_trans' field associated with the material.
+    /// Appears to share the same meaning as _alpha.
+    pub fn transparency(&self) -> Option<f32> {
+        self.get_f32("_trans")
+    }
+
+    /// The '_d' field associated with the material
+    pub fn density(&self) -> Option<f32> {
+        self.get_f32("_d")
+    }
+
+    /// The '_media' field associated with the material.
+    /// This corresponds to the 'cloud' material.
+    pub fn media(&self) -> Option<f32> {
+        self.get_f32("_media")
+    }
+
+    /// The '_media_type' field associated with the material.
+    /// Corresponds to the type of cloud: absorb, scatter, emissive, subsurface scattering
+    pub fn media_type(&self) -> Option<&str> {
+        if let Some(t) = self.properties.get("_media_type") {
+            return Some(t.as_str());
+        }
+
+        None
+    }
+
+    fn get_f32(&self, prop: &str) -> Option<f32> {
+        if let Some(t) = self.properties.get(prop) {
+            match t.parse::<f32>() {
+                Ok(x) => return Some(x),
+                Err(_) => {
+                    debug!("Could not parse float for property '{}': {}", prop, t)
+                }
+            }
+        }
+
+        None
+    }
 }
 
 /// General dictionary
@@ -62,7 +184,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             let mut palette_holder: Vec<u32> = DEFAULT_PALETTE.to_vec();
             let mut materials: Vec<Material> = vec![];
             let mut scene: Vec<SceneNode> = vec![];
-            let mut layers: Vec<Dict> = vec![];
+            let mut layers: Vec<Layer> = Vec::new();
 
             for chunk in children {
                 match chunk {
@@ -78,7 +200,11 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                     Chunk::TransformNode(scene_transform) => {
                         scene.push(SceneNode::Transform {
                             attributes: scene_transform.header.attributes,
-                            frames: scene_transform.frames,
+                            frames: scene_transform
+                                .frames
+                                .into_iter()
+                                .map(|attributes| Frame::new(attributes))
+                                .collect(),
                             child: scene_transform.child,
                         });
                     }
@@ -90,7 +216,19 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                         attributes: scene_shape.header.attributes,
                         models: scene_shape.models,
                     }),
-                    Chunk::Layer(layer) => layers.push(layer.attributes),
+                    Chunk::Layer(layer) => {
+                        if layer.id as usize != layers.len() {
+                            // Not sure if this actually happens in practice, but nothing in the spec prohibits it.
+                            debug!(
+                                "Unexpected layer id {} encountered, layers may be out of order.",
+                                layer.id
+                            );
+                        }
+
+                        layers.push(Layer {
+                            attributes: layer.attributes,
+                        });
+                    }
                     _ => debug!("Unmapped chunk {:?}", chunk),
                 }
             }
@@ -100,7 +238,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                 models,
                 palette: palette_holder,
                 materials,
-                scene,
+                scenes: scene,
                 layers,
             }
         }
@@ -109,7 +247,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             models: vec![],
             palette: vec![],
             materials: vec![],
-            scene: vec![],
+            scenes: vec![],
             layers: vec![],
         },
     }
@@ -175,6 +313,8 @@ fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
     Chunk::Invalid(chunk_content.to_vec())
 }
 
+// NOTE: this does not seem consistent with the PACK documentation.  However, files with PACK chunks seem rare.
+// It's likely this hasn't been tested.  Is this correct?
 fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((chunk_content, Chunk::Size(size))) = parse_chunk(chunk_content) {
         if let Ok((_, Chunk::Voxels(voxels))) = parse_chunk(chunk_content) {
@@ -236,6 +376,7 @@ pub fn parse_material(i: &[u8]) -> IResult<&[u8], Material> {
 
 pub(crate) fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
     let (i, n) = le_u32(i)?;
+
     let init = move || Dict::with_capacity(n as usize);
     let fold = |mut map: Dict, (key, value)| {
         map.insert(key, value);
