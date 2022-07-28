@@ -2,7 +2,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use nom::combinator::all_consuming;
 use nom::multi::many0;
 use nom::number::complete::le_u32;
-use ::parser::le_u32;
+use nom::IResult;
 
 lazy_static! {
   /// The default palette used by MagicaVoxel - this is supplied if no palette

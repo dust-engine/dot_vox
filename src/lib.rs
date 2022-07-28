@@ -87,6 +87,8 @@ use std::io::Read;
 ///       }
 ///     })
 ///     .collect(),
+///   scenes: placeholder::SCENES.to_vec(),
+///   layers: placeholder::LAYERS.to_vec(),
 ///   });
 /// ```
 pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
@@ -150,12 +152,64 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 ///       }
 ///     })
 ///     .collect(),
+///   scenes: placeholder::SCENES.to_vec(),
+///   layers: placeholder::LAYERS.to_vec(),
 ///   });
 /// ```
 pub fn load_bytes(bytes: &[u8]) -> Result<DotVoxData, &'static str> {
     match parse_vox_file(bytes) {
         Ok((_, parsed)) => Ok(parsed),
         Err(_) => Err("Not a valid MagicaVoxel .vox file"),
+    }
+}
+
+/// Data extracted from placeholder.vox for example and testing purposes
+pub mod placeholder {
+    use super::*;
+
+    lazy_static! {
+        /// Scenes extracted from placeholder.vox
+        pub static ref SCENES: Vec<SceneNode> = vec![
+            SceneNode::Transform {
+                attributes: Dict::new(),
+                frames: vec![Frame::default()], // Is this true??  Why empty dict? FIXME
+                child: 1
+            },
+            SceneNode::Group {
+                attributes: Dict::new(),
+                children: vec![2]
+            },
+            SceneNode::Transform {
+                attributes: Dict::new(),
+                frames: {
+                    let mut map = Dict::new();
+                    map.insert("_t".to_owned(), "0 0 1".to_owned());
+
+                    vec![Frame::new(map)]
+                },
+                child: 3,
+            },
+            SceneNode::Shape {
+                attributes: Dict::new(),
+                models: vec![ShapeModel{
+                    model_id: 0,
+                    attributes: Dict::new()
+                }],
+            },
+        ];
+
+        /// Layers extracted from placeholder.vox
+        pub static ref LAYERS: Vec<Layer> = (0..8)
+            .into_iter()
+            .map(|layer| Layer {
+                attributes: {
+                    let mut map = Dict::new();
+                    map.insert("_name".to_string(), layer.to_string());
+
+                    map
+                },
+            })
+            .collect();
     }
 }
 
@@ -182,7 +236,12 @@ mod tests {
             .collect();
     }
 
-    fn placeholder(palette: Vec<u32>, materials: Vec<Material>) -> DotVoxData {
+    fn placeholder(
+        palette: Vec<u32>,
+        materials: Vec<Material>,
+        scenes: Vec<SceneNode>,
+        layers: Vec<Layer>,
+    ) -> DotVoxData {
         DotVoxData {
             version: 150,
             models: vec![Model {
@@ -214,8 +273,10 @@ mod tests {
                     },
                 ],
             }],
-            palette: palette,
-            materials: materials,
+            palette,
+            materials,
+            scenes,
+            layers,
         }
     }
 
@@ -232,6 +293,8 @@ mod tests {
             });
         vec::are_eq(actual.palette, expected.palette);
         vec::are_eq(actual.materials, expected.materials);
+        vec::are_eq(actual.scenes, expected.scenes);
+        vec::are_eq(actual.layers, expected.layers)
     }
 
     #[test]
@@ -240,7 +303,12 @@ mod tests {
         assert!(result.is_ok());
         compare_data(
             result.unwrap(),
-            placeholder(DEFAULT_PALETTE.to_vec(), DEFAULT_MATERIALS.to_vec()),
+            placeholder(
+                DEFAULT_PALETTE.to_vec(),
+                DEFAULT_MATERIALS.to_vec(),
+                placeholder::SCENES.to_vec(),
+                placeholder::LAYERS.to_vec(),
+            ),
         );
     }
 
@@ -266,13 +334,18 @@ mod tests {
         let (_, models) = result.unwrap();
         compare_data(
             models,
-            placeholder(DEFAULT_PALETTE.to_vec(), DEFAULT_MATERIALS.to_vec()),
+            placeholder(
+                DEFAULT_PALETTE.to_vec(),
+                DEFAULT_MATERIALS.to_vec(),
+                placeholder::SCENES.to_vec(),
+                placeholder::LAYERS.to_vec(),
+            ),
         );
     }
 
     #[test]
     fn can_parse_vox_file_with_materials() {
-        let _log = env_logger::init();
+        env_logger::init();
         let bytes = include_bytes!("resources/placeholder-with-materials.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_ok());
@@ -291,7 +364,15 @@ mod tests {
                 map
             },
         };
-        compare_data(voxel_data, placeholder(DEFAULT_PALETTE.to_vec(), materials));
+        compare_data(
+            voxel_data,
+            placeholder(
+                DEFAULT_PALETTE.to_vec(),
+                materials,
+                placeholder::SCENES.to_vec(),
+                placeholder::LAYERS.to_vec(),
+            ),
+        );
     }
 
     fn write_and_load(data: DotVoxData) {
@@ -305,11 +386,16 @@ mod tests {
 
     #[test]
     fn can_write_vox_format_without_palette_nor_materials() {
-        write_and_load(placeholder(Vec::new(), Vec::new()));
+        write_and_load(placeholder(Vec::new(), Vec::new(), Vec::new(), Vec::new()));
     }
 
     #[test]
     fn can_write_vox_format_without_materials() {
-        write_and_load(placeholder(DEFAULT_PALETTE.to_vec(), Vec::new()));
+        write_and_load(placeholder(
+            DEFAULT_PALETTE.to_vec(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+        ));
     }
 }

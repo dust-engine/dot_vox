@@ -1,10 +1,10 @@
 use nom::multi::count;
-use ::parser::{le_u8, le_u32};
+use nom::number::complete::{le_u32, le_u8};
 use nom::sequence::tuple;
 use nom::IResult;
 
 /// A renderable voxel Model
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Model {
     /// The size of the model in voxels
     pub size: Size,
@@ -22,7 +22,7 @@ impl Model {
 /// The size of a model in voxels
 ///
 /// Indicates the size of the model in Voxels.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Size {
     /// The width of the model in voxels.
     pub x: u32,
@@ -35,7 +35,7 @@ pub struct Size {
 /// A Voxel
 ///
 /// A Voxel is a point in 3D space, with an indexed colour attached.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Voxel {
     /// The X coordinate for the Voxel
     pub x: u8,
@@ -57,7 +57,15 @@ pub fn parse_size(i: &[u8]) -> IResult<&[u8], Size> {
 
 fn parse_voxel(input: &[u8]) -> IResult<&[u8], Voxel> {
     let (input, (x, y, z, i)) = tuple((le_u8, le_u8, le_u8, le_u8))(input)?;
-    Ok((input, Voxel { x, y, z, i: i.saturating_sub(1) }))
+    Ok((
+        input,
+        Voxel {
+            x,
+            y,
+            z,
+            i: i.saturating_sub(1),
+        },
+    ))
 }
 
 pub fn parse_voxels(i: &[u8]) -> IResult<&[u8], Vec<Voxel>> {

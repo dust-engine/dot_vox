@@ -1,6 +1,7 @@
 [package]
 name = "dot_vox"
 version = "4.1.0"
+edition = "2021"
 authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
 description = "A Rust library for loading MagicaVoxel .vox files."
 license = "MIT"
@@ -18,4 +19,4 @@ nom = { version = "^7", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 avow = "0.2.0"
-env_logger = "^0.5"
+env_logger = "0.9"
