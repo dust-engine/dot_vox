@@ -14,26 +14,23 @@ v3.0.0, please open your file in the latest version of MagicaVoxel and resave - 
 switch you over to the newer dictionary-based `MATL` chunks. Alternatively, continue to use 
 v2.0.0.
 
-I'm not currently using MagicaVoxel, so am not keeping up with developments in the file format. If there are any
-missing features, or problems loading more recent files, please don't hesitate to open an issue. I'll try to get back
-to you within a day or two!
+The [Dust Engine](https://github.com/dust-engine) project is currently maintaining this crate.
+If there are any changes in the MagicaVoxel file format, feel free to open an issue or a PR, and we'll work to get them implemented.
 
 ## RustDoc
 
 Kindly hosted over at https://docs.rs/dot_vox/.
 
-## Still to implement
-
-* `nTRN` chunk
-* `nGRP` chunk
-* `nSHP` chunk
-
 ## Thanks
 
-As a maintainer, its always nice to get bug reports and (even better) pull requests. Thanks go to all of the following
-for doing just that!
+`dot_vox` was originally developed by [@davidedmonds](https://github.com/davidedmonds) and many people have contributed to its development.
 
-- @jice-nospam (first crack at palette parsing)
-- @expenses (bug report on palette indexing)
-- @xMAC94x (bug report on material parsing)
-- @bonsairobo (implementation of `write_vox` functionality)
+- [@davidedmonds](https://github.com/davidedmonds) (The original author of this crate)
+- [@jice-nospam](https://github.com/jice-nospam) (first crack at palette parsing)
+- [@expenses](https://github.com/expenses) (bug report on palette indexing)
+- [@xMAC94x](https://github.com/xMAC94x) (bug report on material parsing)
+- [@bonsairobo](https://github.com/bonsairobo) (implementation of `write_vox` functionality)
+- [@Sixmorphugus](https://github.com/Sixmorphugus) (implementation of Scene Graph parsing)
+- [@nickelc](https://github.com/nickelc) (migrating to nom 7 and modernizing the code base)
+- [@InBetweenNames](https://github.com/InBetweenNames) (Rolled up changes in multiple PRs and added various helper methods)
+- [@virtualritz](https://github.com/virtualritz) (Upgrading the codebase to Rust 2021)

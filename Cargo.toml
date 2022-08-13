@@ -8,7 +8,7 @@ license = "MIT"
 keywords = ['voxel', 'MagicaVoxel', 'game', 'game-dev']
 documentation = "https://docs.rs/dot_vox"
 homepage = "https://docs.rs/dot_vox"
-repository = "https://github.com/davidedmonds/dot_vox"
+repository = "https://github.com/dust-engine/dot_vox"
 readme = "README.md"
 
 [dependencies]
