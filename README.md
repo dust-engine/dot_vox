@@ -1,7 +1,7 @@
 # dot_vox
 
 ![](https://img.shields.io/crates/v/dot_vox.svg)
-![](https://travis-ci.org/davidedmonds/dot_vox.svg?branch=master)
+[![CI](https://github.com/dust-engine/dot_vox/actions/workflows/ci.yml/badge.svg)](https://github.com/dust-engine/dot_vox/actions/workflows/ci.yml)
 ![](https://docs.rs/dot_vox/badge.svg)
 
 Rust parser for [MagicaVoxel](https://ephtracy.github.io/) .vox files, using
