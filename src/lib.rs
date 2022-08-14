@@ -219,7 +219,8 @@ pub mod placeholder {
             SceneNode::Transform {
                 attributes: Dict::new(),
                 frames: vec![Frame::default()], // Is this true??  Why empty dict? FIXME
-                child: 1
+                child: 1,
+                layer_id: 4294967295
             },
             SceneNode::Group {
                 attributes: Dict::new(),
@@ -234,6 +235,7 @@ pub mod placeholder {
                     vec![Frame::new(map)]
                 },
                 child: 3,
+                layer_id: 0
             },
             SceneNode::Shape {
                 attributes: Dict::new(),

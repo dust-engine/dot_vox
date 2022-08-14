@@ -220,6 +220,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                             attributes: scene_transform.header.attributes,
                             frames: scene_transform.frames.into_iter().map(Frame::new).collect(),
                             child: scene_transform.child,
+                            layer_id: scene_transform.layer_id,
                         });
                     }
                     Chunk::GroupNode(scene_group) => scene.push(SceneNode::Group {
