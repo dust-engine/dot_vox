@@ -381,6 +381,8 @@ pub enum SceneNode {
         frames: Vec<Frame>,
         /// Child node of this transform node.
         child: u32,
+        /// Layer ID
+        layer_id: u32,
     },
     /// Group Node Chunk (nGRP)
     Group {
