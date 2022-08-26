@@ -1,12 +1,10 @@
 //! Load MagicaVoxel .vox files into Rust
-extern crate byteorder;
 #[cfg(test)]
 extern crate env_logger;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-extern crate nom;
 
 #[cfg(test)]
 extern crate avow;
@@ -121,7 +119,6 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 ///
 /// ```
 /// use dot_vox::*;
-/// use std::collections::HashMap;
 ///
 /// let result = load_bytes(include_bytes!("resources/placeholder.vox"));
 /// assert_eq!(result.unwrap(), DotVoxData {
