@@ -1,4 +1,7 @@
-//! Load MagicaVoxel .vox files into Rust
+//! Load [MagicaVoxel](https://ephtracy.github.io/) `.vox` files from Rust.
+use parser::parse_vox_file;
+use std::{fs::File, io::Read};
+
 #[cfg(test)]
 extern crate env_logger;
 #[macro_use]
@@ -27,23 +30,21 @@ pub use scene::*;
 
 pub use palette::DEFAULT_PALETTE;
 
-use parser::parse_vox_file;
-
-use std::fs::File;
-use std::io::Read;
-
-/// Loads the supplied MagicaVoxel .vox file
+/// Loads the supplied [MagicaVoxel](https://ephtracy.github.io/) `.vox` file
 ///
-/// Loads the supplied file, parses it, and returns a `DotVoxData` containing
-/// the version of the MagicaVoxel file, a `Vec<Model>` containing all `Model`s
-/// contained within the file, a `Vec<u32>` containing the palette information
-/// (RGBA), and a `Vec<Material>` containing all the specialized materials.
+/// Loads the supplied file, parses it, and returns a [`DotVoxData`] containing
+/// the version of the MagicaVoxel file, a `Vec<`[`Model`]`>` containing all
+/// [`Model`]s contained within the file, a `Vec<u32>` containing the palette
+/// information (RGBA), and a `Vec<`[`Material`]`>` containing all the
+/// specialized materials.
 ///
 /// # Panics
-/// No panics should occur with this library - if you find one, please raise a
-/// GitHub issue for it.
+///
+/// No panics should occur with this library -- if you find one, please raise a
+/// [GitHub issue](https://github.com/dust-engine/dot_vox/issues) for it.
 ///
 /// # Errors
+///
 /// All errors are strings, and should describe the issue that caused them to
 /// occur.
 ///
@@ -53,40 +54,61 @@ use std::io::Read;
 ///
 /// ```
 /// use dot_vox::*;
-/// use std::collections::HashMap;
 ///
 /// let result = load("src/resources/placeholder.vox");
-/// assert_eq!(result.unwrap(), DotVoxData {
-///   version: 150,
-///   models: vec!(
-///     Model {
-///       size: Size { x: 2, y: 2, z: 2 },
-///       voxels: vec!(
-///         Voxel { x: 0, y: 0, z: 0, i: 225 },
-///         Voxel { x: 0, y: 1, z: 1, i: 215 },
-///         Voxel { x: 1, y: 0, z: 1, i: 235 },
-///         Voxel { x: 1, y: 1, z: 0, i: 5 }
-///       )
+/// assert_eq!(
+///     result.unwrap(),
+///     DotVoxData {
+///         version: 150,
+///         models: vec!(Model {
+///             size: Size { x: 2, y: 2, z: 2 },
+///             voxels: vec!(
+///                 Voxel {
+///                     x: 0,
+///                     y: 0,
+///                     z: 0,
+///                     i: 225
+///                 },
+///                 Voxel {
+///                     x: 0,
+///                     y: 1,
+///                     z: 1,
+///                     i: 215
+///                 },
+///                 Voxel {
+///                     x: 1,
+///                     y: 0,
+///                     z: 1,
+///                     i: 235
+///                 },
+///                 Voxel {
+///                     x: 1,
+///                     y: 1,
+///                     z: 0,
+///                     i: 5
+///                 }
+///             )
+///         }),
+///         palette: DEFAULT_PALETTE.to_vec(),
+///         materials: (0..256)
+///             .into_iter()
+///             .map(|i| Material {
+///                 id: i,
+///                 properties: {
+///                     let mut map = Dict::new();
+///                     map.insert("_ior".to_owned(), "0.3".to_owned());
+///                     map.insert("_spec".to_owned(), "0.5".to_owned());
+///                     map.insert("_rough".to_owned(), "0.1".to_owned());
+///                     map.insert("_type".to_owned(), "_diffuse".to_owned());
+///                     map.insert("_weight".to_owned(), "1".to_owned());
+///                     map
+///                 }
+///             })
+///             .collect(),
+///         scenes: placeholder::SCENES.to_vec(),
+///         layers: placeholder::LAYERS.to_vec(),
 ///     }
-///   ),
-///   palette: DEFAULT_PALETTE.to_vec(),
-///   materials: (0..256).into_iter()
-///     .map(|i| Material {
-///       id: i,
-///       properties: {
-///         let mut map = Dict::new();
-///         map.insert("_ior".to_owned(), "0.3".to_owned());
-///         map.insert("_spec".to_owned(), "0.5".to_owned());
-///         map.insert("_rough".to_owned(), "0.1".to_owned());
-///         map.insert("_type".to_owned(), "_diffuse".to_owned());
-///         map.insert("_weight".to_owned(), "1".to_owned());
-///         map
-///       }
-///     })
-///     .collect(),
-///   scenes: placeholder::SCENES.to_vec(),
-///   layers: placeholder::LAYERS.to_vec(),
-///   });
+/// );
 /// ```
 pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
     match File::open(filename) {
@@ -101,15 +123,19 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 
 /// Parses the byte array as a .vox file.
 ///
-/// Parses the byte array and returns a `DotVoxData` containing  the version of the MagicaVoxel
-/// file, a `Vec<Model>` containing all `Model`s contained within the file, a `Vec<u32>` containing
-/// the palette information (RGBA), and a `Vec<Material>` containing all the specialized materials.
+/// Parses the byte array and returns a [`DotVoxData`] containing  the version
+/// of the MagicaVoxel file, a `Vec<`[`Model`]`>` containing all `Model`s
+/// contained within the file, a `Vec<u32>` containing the palette information
+/// (RGBA), and a `Vec<`[`Material`]`>` containing all the specialized
+/// materials.
 ///
 /// # Panics
-/// No panics should occur with this library - if you find one, please raise a
-/// GitHub issue for it.
+///
+/// No panics should occur with this library -- if you find one, please raise a
+/// [GitHub issue](https://github.com/dust-engine/dot_vox/issues) for it.
 ///
 /// # Errors
+///
 /// All errors are strings, and should describe the issue that caused them to
 /// occur.
 ///
@@ -121,37 +147,59 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 /// use dot_vox::*;
 ///
 /// let result = load_bytes(include_bytes!("resources/placeholder.vox"));
-/// assert_eq!(result.unwrap(), DotVoxData {
-///   version: 150,
-///   models: vec!(
-///     Model {
-///       size: Size { x: 2, y: 2, z: 2 },
-///       voxels: vec!(
-///         Voxel { x: 0, y: 0, z: 0, i: 225 },
-///         Voxel { x: 0, y: 1, z: 1, i: 215 },
-///         Voxel { x: 1, y: 0, z: 1, i: 235 },
-///         Voxel { x: 1, y: 1, z: 0, i: 5 }
-///       )
+/// assert_eq!(
+///     result.unwrap(),
+///     DotVoxData {
+///         version: 150,
+///         models: vec!(Model {
+///             size: Size { x: 2, y: 2, z: 2 },
+///             voxels: vec!(
+///                 Voxel {
+///                     x: 0,
+///                     y: 0,
+///                     z: 0,
+///                     i: 225
+///                 },
+///                 Voxel {
+///                     x: 0,
+///                     y: 1,
+///                     z: 1,
+///                     i: 215
+///                 },
+///                 Voxel {
+///                     x: 1,
+///                     y: 0,
+///                     z: 1,
+///                     i: 235
+///                 },
+///                 Voxel {
+///                     x: 1,
+///                     y: 1,
+///                     z: 0,
+///                     i: 5
+///                 }
+///             )
+///         }),
+///         palette: DEFAULT_PALETTE.to_vec(),
+///         materials: (0..256)
+///             .into_iter()
+///             .map(|i| Material {
+///                 id: i,
+///                 properties: {
+///                     let mut map = Dict::new();
+///                     map.insert("_ior".to_owned(), "0.3".to_owned());
+///                     map.insert("_spec".to_owned(), "0.5".to_owned());
+///                     map.insert("_rough".to_owned(), "0.1".to_owned());
+///                     map.insert("_type".to_owned(), "_diffuse".to_owned());
+///                     map.insert("_weight".to_owned(), "1".to_owned());
+///                     map
+///                 }
+///             })
+///             .collect(),
+///         scenes: placeholder::SCENES.to_vec(),
+///         layers: placeholder::LAYERS.to_vec(),
 ///     }
-///   ),
-///   palette: DEFAULT_PALETTE.to_vec(),
-///   materials: (0..256).into_iter()
-///     .map(|i| Material {
-///       id: i,
-///       properties: {
-///         let mut map = Dict::new();
-///         map.insert("_ior".to_owned(), "0.3".to_owned());
-///         map.insert("_spec".to_owned(), "0.5".to_owned());
-///         map.insert("_rough".to_owned(), "0.1".to_owned());
-///         map.insert("_type".to_owned(), "_diffuse".to_owned());
-///         map.insert("_weight".to_owned(), "1".to_owned());
-///         map
-///       }
-///     })
-///     .collect(),
-///   scenes: placeholder::SCENES.to_vec(),
-///   layers: placeholder::LAYERS.to_vec(),
-///   });
+/// );
 /// ```
 pub fn load_bytes(bytes: &[u8]) -> Result<DotVoxData, &'static str> {
     match parse_vox_file(bytes) {

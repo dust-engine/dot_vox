@@ -1,16 +1,16 @@
 use crate::{Layer, Material, Model, SceneNode};
 use std::io::{self, Write};
 
-/// Container for .vox file data
+/// Container for `.vox` file data.
 #[derive(Debug, PartialEq, Eq)]
 pub struct DotVoxData {
-    /// The version number of the .vox file.
+    /// The version number of the `.vox` file.
     pub version: u32,
-    /// A Vec of all the models contained within this file.
+    /// A `Vec` of all the models contained within this file.
     pub models: Vec<Model>,
-    /// A Vec containing the colour palette as 32-bit integers
+    /// A `Vec` containing the colour palette as 32-bit integers
     pub palette: Vec<u32>,
-    /// A Vec containing all the Materials set
+    /// A `Vec` containing all the [`Material`]s set.
     pub materials: Vec<Material>,
     /// Scene. The first node in this list is always the root node.
     pub scenes: Vec<SceneNode>,
@@ -19,7 +19,7 @@ pub struct DotVoxData {
 }
 
 impl DotVoxData {
-    /// Serializes `self` in the VOX format.
+    /// Serializes `self` in the `.vox` format.
     /// TODO: write the material set
     pub fn write_vox<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
         self.write_header(writer)?;

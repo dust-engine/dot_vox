@@ -1,12 +1,9 @@
 use byteorder::{ByteOrder, LittleEndian};
-use nom::combinator::all_consuming;
-use nom::multi::many0;
-use nom::number::complete::le_u32;
-use nom::IResult;
+use nom::{combinator::all_consuming, multi::many0, number::complete::le_u32, IResult};
 
 lazy_static! {
-  /// The default palette used by MagicaVoxel - this is supplied if no palette
-  /// is included in the .vox file.
+  /// The default palette used by [MagicaVoxel](https://ephtracy.github.io/) -- this is supplied if no palette
+  /// is included in the `.vox` file.
   pub static ref DEFAULT_PALETTE: Vec<u32> =
     include_bytes!("resources/default_palette.bytes")
         .chunks(4)
