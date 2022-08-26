@@ -1,5 +1,4 @@
 //! Load MagicaVoxel .vox files into Rust
-
 extern crate byteorder;
 #[cfg(test)]
 extern crate env_logger;
@@ -216,8 +215,6 @@ pub mod placeholder {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
     use avow::vec;
 

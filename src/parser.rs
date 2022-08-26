@@ -56,7 +56,7 @@ impl Material {
     pub fn weight(&self) -> Option<f32> {
         let w = self.get_f32("_weight");
 
-        if let Some(w) = w && (w < 0.0 || w > 1.0)
+        if let Some(w) = w && !(0.0..=1.0).contains(&w)
         {
             debug!("_weight observed outside of range of [0..1]: {}", w);
         }
@@ -203,7 +203,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                             frames: scene_transform
                                 .frames
                                 .into_iter()
-                                .map(|attributes| Frame::new(attributes))
+                                .map(Frame::new)
                                 .collect(),
                             child: scene_transform.child,
                         });

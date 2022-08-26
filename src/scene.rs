@@ -280,8 +280,8 @@ impl Frame {
 
                 let mut index_nz3 = 0;
 
-                for i in 0..possible_thirds.len() {
-                    if possible_thirds[i] == false {
+                for (i, possible_third) in possible_thirds.iter().enumerate() {
+                    if !possible_third {
                         index_nz3 = i;
                     }
                 }
