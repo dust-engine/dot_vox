@@ -24,6 +24,8 @@ pub enum Chunk {
     Pack(Model),
     Palette(Vec<u32>),
     Material(Material),
+    RenderObjects(Dict),
+    RenderCamera(RenderCamera),
     TransformNode(SceneTransform),
     GroupNode(SceneGroup),
     ShapeNode(SceneShape),
@@ -38,6 +40,15 @@ pub struct Material {
     /// The Material's ID.  Corresponds to an index in the palette.
     pub id: u32,
     /// Properties of the material, mapped by property name.
+    pub properties: Dict,
+}
+
+/// A material used to render this model.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RenderCamera {
+    /// The Cameras's ID.
+    pub id: u32,
+    /// Properties of the camera, mapped by property name.
     pub properties: Dict,
 }
 
@@ -56,9 +67,10 @@ impl Material {
     pub fn weight(&self) -> Option<f32> {
         let w = self.get_f32("_weight");
 
-        if let Some(w) = w && (w < 0.0 || w > 1.0)
-        {
-            debug!("_weight observed outside of range of [0..1]: {}", w);
+        if let Some(w) = w {
+            if w < 0.0 || w > 1.0 {
+                debug!("_weight observed outside of range of [0..1]: {}", w);
+            }
         }
 
         w
@@ -183,6 +195,8 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             let mut models: Vec<Model> = vec![];
             let mut palette_holder: Vec<u32> = DEFAULT_PALETTE.to_vec();
             let mut materials: Vec<Material> = vec![];
+            let mut render_objects: Vec<Dict> = vec![];
+            let mut render_cameras: Vec<RenderCamera> = vec![];
             let mut scene: Vec<SceneNode> = vec![];
             let mut layers: Vec<Layer> = Vec::new();
 
@@ -197,6 +211,8 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                     Chunk::Pack(model) => models.push(model),
                     Chunk::Palette(palette) => palette_holder = palette,
                     Chunk::Material(material) => materials.push(material),
+                    Chunk::RenderObjects(dict) => render_objects.push(dict),
+                    Chunk::RenderCamera(camera) => render_cameras.push(camera),
                     Chunk::TransformNode(scene_transform) => {
                         scene.push(SceneNode::Transform {
                             attributes: scene_transform.header.attributes,
@@ -238,6 +254,8 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                 models,
                 palette: palette_holder,
                 materials,
+                render_objects,
+                render_cameras,
                 scenes: scene,
                 layers,
             }
@@ -247,6 +265,8 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             models: vec![],
             palette: vec![],
             materials: vec![],
+            render_objects: vec![],
+            render_cameras: vec![],
             scenes: vec![],
             layers: vec![],
         },
@@ -270,6 +290,8 @@ fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content
             "PACK" => build_pack_chunk(chunk_content),
             "RGBA" => build_palette_chunk(chunk_content),
             "MATL" => build_material_chunk(chunk_content),
+            "rOBJ" => build_render_objects_chunk(chunk_content),
+            "rCAM" => build_render_camera_chunk(chunk_content),
             "nTRN" => build_scene_transform_chunk(chunk_content),
             "nGRP" => build_scene_group_chunk(chunk_content),
             "nSHP" => build_scene_shape_chunk(chunk_content),
@@ -302,6 +324,19 @@ fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content
 fn build_material_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((_, material)) = parse_material(chunk_content) {
         return Chunk::Material(material);
+    }
+    Chunk::Invalid(chunk_content.to_vec())
+}
+fn build_render_camera_chunk(chunk_content: &[u8]) -> Chunk {
+    if let Ok((_, camera)) = parse_render_camera(chunk_content) {
+        return Chunk::RenderCamera(camera);
+    }
+    Chunk::Invalid(chunk_content.to_vec())
+}
+
+fn build_render_objects_chunk(chunk_content: &[u8]) -> Chunk {
+    if let Ok((_, dict)) = parse_dict(chunk_content) {
+        return Chunk::RenderObjects(dict);
     }
     Chunk::Invalid(chunk_content.to_vec())
 }
@@ -372,6 +407,11 @@ fn build_layer_chunk(chunk_content: &[u8]) -> Chunk {
 pub fn parse_material(i: &[u8]) -> IResult<&[u8], Material> {
     let (i, (id, properties)) = pair(le_u32, parse_dict)(i)?;
     Ok((i, Material { id, properties }))
+}
+
+pub fn parse_render_camera(i: &[u8]) -> IResult<&[u8], RenderCamera> {
+    let (i, (id, properties)) = pair(le_u32, parse_dict)(i)?;
+    Ok((i, RenderCamera { id, properties }))
 }
 
 pub(crate) fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
