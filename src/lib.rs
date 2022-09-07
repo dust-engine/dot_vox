@@ -87,6 +87,8 @@ use std::io::Read;
 ///       }
 ///     })
 ///     .collect(),
+///   render_objects: vec![],
+///   render_cameras: vec![],
 ///   scenes: placeholder::SCENES.to_vec(),
 ///   layers: placeholder::LAYERS.to_vec(),
 ///   });
@@ -153,6 +155,8 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 ///       }
 ///     })
 ///     .collect(),
+///   render_objects: vec![],
+///   render_cameras: vec![],
 ///   scenes: placeholder::SCENES.to_vec(),
 ///   layers: placeholder::LAYERS.to_vec(),
 ///   });
@@ -218,6 +222,8 @@ pub mod placeholder {
 mod tests {
     use std::collections::HashMap;
 
+    use crate::parser::RenderCamera;
+
     use super::*;
     use avow::vec;
 
@@ -235,6 +241,27 @@ mod tests {
                     map.insert("_weight".to_owned(), "1".to_owned());
                     map
                 }
+            })
+            .collect();
+    }
+
+    lazy_static! {
+        static ref DEFAULT_RENDER_OBJECTS: Vec<Dict> = serde_json::from_slice::<Vec<Dict>>(
+            include_bytes!("resources/default_render_objects.json")
+        )
+        .unwrap();
+    }
+
+    lazy_static! {
+        static ref DEFAULT_RENDER_CAMERAS: Vec<RenderCamera> =
+            serde_json::from_slice::<Vec<(u32, Dict)>>(include_bytes!(
+                "resources/default_render_cameras.json"
+            ))
+            .unwrap()
+            .iter()
+            .map(|(id, properties)| RenderCamera {
+                id: *id,
+                properties: properties.to_owned()
             })
             .collect();
     }
@@ -278,6 +305,8 @@ mod tests {
             }],
             palette,
             materials,
+            render_objects: vec![],
+            render_cameras: vec![],
             scenes,
             layers,
         }
@@ -376,6 +405,26 @@ mod tests {
                 placeholder::LAYERS.to_vec(),
             ),
         );
+    }
+
+    #[test]
+    fn can_parse_vox_file_with_render_objects() {
+        let bytes = include_bytes!("resources/placeholder-with-render-objects.vox").to_vec();
+        let result = super::parse_vox_file(&bytes);
+        assert!(result.is_ok());
+        let (_, voxel_data) = result.unwrap();
+
+        vec::are_eq(voxel_data.render_objects, DEFAULT_RENDER_OBJECTS.to_vec());
+    }
+
+    #[test]
+    fn can_parse_vox_file_with_render_cameras() {
+        let bytes = include_bytes!("resources/placeholder-with-render-objects.vox").to_vec();
+        let result = super::parse_vox_file(&bytes);
+        assert!(result.is_ok());
+        let (_, voxel_data) = result.unwrap();
+
+        vec::are_eq(voxel_data.render_cameras, DEFAULT_RENDER_CAMERAS.to_vec());
     }
 
     fn write_and_load(data: DotVoxData) {

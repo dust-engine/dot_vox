@@ -1,5 +1,9 @@
-use crate::{Layer, Material, Model, SceneNode};
-use std::io::{self, Write};
+use crate::{parser::RenderCamera, Layer, Material, Model, SceneNode};
+use std::{
+    collections::HashMap,
+    io::{self, Write},
+};
+pub type Dict = HashMap<String, String>;
 
 /// Container for .vox file data
 #[derive(Debug, PartialEq, Eq)]
@@ -12,6 +16,10 @@ pub struct DotVoxData {
     pub palette: Vec<u32>,
     /// A Vec containing all the Materials set
     pub materials: Vec<Material>,
+    /// A Vec containing a collection Render Object dicts
+    pub render_objects: Vec<Dict>,
+    // A Vec containing a collection of Render Cameras
+    pub render_cameras: Vec<RenderCamera>,
     /// Scene. The first node in this list is always the root node.
     pub scenes: Vec<SceneNode>,
     /// Layers. Used by scene transform nodes.
