@@ -1,22 +1,26 @@
 use crate::Dict;
-use nom::number::complete::{le_i32, le_u32};
-use nom::sequence::tuple;
-use nom::{multi::count, sequence::pair, IResult};
+use nom::{
+    multi::count,
+    number::complete::{le_i32, le_u32},
+    sequence::pair,
+    sequence::tuple,
+    IResult,
+};
 
 use crate::parser::parse_dict;
 /// Node header.
 #[derive(Debug, PartialEq, Eq)]
 pub struct NodeHeader {
-    /// Id of this transform node
+    /// ID of this transform node.
     pub id: u32,
-    /// Attributes of this transform node
+    /// Attributes of this transform node.
     pub attributes: Dict,
 }
 
 /// A model reference in a shape node.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShapeModel {
-    /// Id of the model.
+    /// ID of the model.
     pub model_id: u32,
     /// Attributes of the model in this shape node.
     pub attributes: Dict,
@@ -42,66 +46,65 @@ impl ShapeModel {
 /// Transform node.
 #[derive(Debug, PartialEq, Eq)]
 pub struct SceneTransform {
-    /// Header
+    /// Header.
     pub header: NodeHeader,
     /// 1 single child (appear to be always either a group or shape node)
     pub child: u32,
     /// Layer ID.
     pub layer_id: u32,
-    /// Positional Frames.
+    /// Positional frames.
     pub frames: Vec<Dict>,
 }
 
 /// Group node.
 #[derive(Debug, PartialEq, Eq)]
 pub struct SceneGroup {
-    /// Header
+    /// Header.
     pub header: NodeHeader,
-    /// Multiple children (appear to be always transform nodes)
+    /// Multiple children (appear to be always transform nodes).
     pub children: Vec<u32>,
 }
 
 /// Shape node.
 #[derive(Debug, PartialEq, Eq)]
 pub struct SceneShape {
-    /// Header
+    /// Header.
     pub header: NodeHeader,
-    /// 1 or more models
+    /// One or more models.
     pub models: Vec<ShapeModel>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-/// A color stored as RGB
+/// A color stored as sRGB.
 pub struct Color {
     r: u8,
     g: u8,
     b: u8,
 }
 
-/// Layer information (raw)
+/// Layer information (raw).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RawLayer {
-    /// id of this layer.
+    /// ID of this layer.
     pub id: u32,
-
-    /// Attributes of this layer
+    /// Attributes of this layer.
     pub attributes: Dict,
 }
 
-/// Layer information
+/// Layer information.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layer {
-    /// Attributes of this layer
+    /// Attributes of this layer.
     pub attributes: Dict,
 }
 
 impl Layer {
-    /// Return the name for this layer, if it exists
+    /// Return the name for this layer, if it exists.
     pub fn name(&self) -> Option<String> {
         self.attributes.get("_name").cloned()
     }
 
-    /// Return whether this layer is hidden (layers are visible by default)
+    /// Return whether this layer is hidden (layers are visible by default).
     pub fn hidden(&self) -> bool {
         if let Some(x) = self.attributes.get("_hidden") {
             return x == "1";
@@ -110,7 +113,7 @@ impl Layer {
         false
     }
 
-    /// Return the color associated with this layer, if one has been set
+    /// Return the color associated with this layer, if one has been set.
     pub fn color(&self) -> Option<Color> {
         if let Some(x) = self.attributes.get("_color") {
             if let IResult::<&str, (u8, &str, u8, &str, u8)>::Ok((_, (r, _, g, _, b))) =
@@ -134,6 +137,7 @@ impl Layer {
         None
     }
 }
+
 fn parse_node_header(i: &[u8]) -> IResult<&[u8], NodeHeader> {
     let (i, (id, attributes)) = pair(le_u32, parse_dict)(i)?;
     Ok((i, NodeHeader { id, attributes }))
@@ -188,14 +192,15 @@ pub fn parse_layer(i: &[u8]) -> IResult<&[u8], RawLayer> {
     let (i, _ignored) = le_u32(i)?;
     Ok((i, RawLayer { id, attributes }))
 }
+
 /// Represents a translation. Used to position a chunk relative to other chunks.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Position {
-    /// The X coordinate for the Translation
+    /// The X coordinate of the translation.
     pub x: i32,
-    /// The Y coordinate for the Translation
+    /// The Y coordinate of the translation.
     pub y: i32,
-    /// The Z coordinate for the Translation
+    /// The Z coordinate of the translation.
     pub z: i32,
 }
 
@@ -216,30 +221,34 @@ impl From<Position> for (i32, i32, i32) {
 }
 
 /// Represents a rotation.  Used to orient a chunk relative to other chunks.
-/// The rotation is represented as a row-major 3x3 matrix (this is how it appears in the .vox format).
+/// The rotation is represented as a row-major 3×3 matrix (this is how it
+/// appears in the `.vox` format).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rotation {
-    /// This is a row-major representation of the rotation as an orthonormal 3x3 matrix.
-    /// The entries are in [-1..1].
+    /// This is a row-major representation of the rotation as an orthonormal 3×3
+    /// matrix. The entries are in [-1..1].
     rot: [[i8; 3]; 3],
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
-/// Represents an animation.  The chunk is oriented according to the rotation ('_r') is placed at the position ('t') specified.
-/// The Rotation is instantaneous and happens at the start of the Frame.
-/// The animation is interpolated across the sequence of Frames using their positions.
+/// Represents an animation.  The chunk is oriented according to the rotation
+/// (`_r`) is placed at the position (`t`) specified. The Rotation is
+/// instantaneous and happens at the start of the frame. The animation is
+/// interpolated across the sequence of Frames using their positions.
 pub struct Frame {
     /// The raw attributes as parsed from the .vox
     attributes: Dict,
 }
 
 impl Frame {
-    /// Build a new frame from a set of attributes.  Note that construction is lazy; parsing happens at query time.
+    /// Build a new frame from a set of attributes.  Note that construction is
+    /// lazy; parsing happens at query time.
     pub fn new(attributes: Dict) -> Frame {
         Frame { attributes }
     }
 
-    /// The "_r" field in the .vox spec.  Represents the orientation of the model.
+    /// The `_r` field in the `.vox` spec.  Represents the orientation of the
+    /// model.
     pub fn orientation(&self) -> Option<Rotation> {
         if let Some(value) = self.attributes.get("_r") {
             if let IResult::<&str, u8>::Ok((_, byte_rotation)) =
@@ -271,7 +280,8 @@ impl Frame {
                     return None;
                 }
 
-                // You get the third index out via a process of elimination here. It's the one that wasn't used for the other rows.
+                // You get the third index out via a process of elimination here. It's the one
+                // that wasn't used for the other rows.
                 let possible_thirds = [
                     index_nz1 == 0 || index_nz2 == 0,
                     index_nz1 == 1 || index_nz2 == 1,
@@ -280,8 +290,8 @@ impl Frame {
 
                 let mut index_nz3 = 0;
 
-                for i in 0..possible_thirds.len() {
-                    if possible_thirds[i] == false {
+                for (i, possible_third) in possible_thirds.iter().enumerate() {
+                    if !possible_third {
                         index_nz3 = i;
                     }
                 }
@@ -319,7 +329,8 @@ impl Frame {
         None
     }
 
-    /// The "_t" field in the .vox spec.  Represents the position of this frame begins in world space.
+    /// The `_t` field in the `.vox` spec.  Represents the position of this
+    /// frame begins in world space.
     pub fn position(&self) -> Option<Position> {
         if let Some(value) = self.attributes.get("_t") {
             match tuple((
@@ -342,7 +353,8 @@ impl Frame {
         None
     }
 
-    /// The "_f" field in the .vox spec.  Represents the frame number that this keyframe is located at.
+    /// The `_f` field in the .vox spec.  Represents the frame number that this
+    /// keyframe is located at.
     pub fn frame_index(&self) -> Option<u32> {
         if let Some(value) = self.attributes.get("_f") {
             if let IResult::<&str, u32>::Ok((_, frame_idx)) =
@@ -357,7 +369,8 @@ impl Frame {
     }
 }
 
-/// Scene graph nodes for representing a scene in DotVoxData.
+/// Scene graph nodes for representing a scene in
+/// [`DotVoxData`](crate::dot_vox_data::DotVoxData).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SceneNode {
     /// Transform Node Chunk (nTRN)
@@ -366,14 +379,14 @@ pub enum SceneNode {
         attributes: Dict,
         /// Transform frames.
         frames: Vec<Frame>,
-        /// Child node of this Transform node.
+        /// Child node of this transform node.
         child: u32,
     },
     /// Group Node Chunk (nGRP)
     Group {
         /// Attributes.
         attributes: Dict,
-        /// Child nodes
+        /// Child nodes.
         children: Vec<u32>,
     },
     /// Shape Node Chunk (nSHP)

@@ -1,18 +1,22 @@
 use crate::{
-    model, palette, scene, DotVoxData, Layer, Model, SceneGroup, SceneNode, SceneShape,
-    SceneTransform, Size, Voxel, DEFAULT_PALETTE,
+    model, palette, scene, DotVoxData, Frame, Layer, Model, RawLayer, SceneGroup, SceneNode,
+    SceneShape, SceneTransform, Size, Voxel, DEFAULT_PALETTE,
 };
-use nom::bytes::complete::{tag, take};
-use nom::combinator::{flat_map, map_res};
-use nom::multi::{fold_many_m_n, many0};
-use nom::number::complete::le_u32;
-use nom::sequence::pair;
-use nom::IResult;
-use std::collections::HashMap;
-use std::str;
-use std::str::Utf8Error;
+use nom::{
+    bytes::complete::{tag, take},
+    combinator::{flat_map, map_res},
+    multi::{fold_many_m_n, many0},
+    number::complete::le_u32,
+    sequence::pair,
+    IResult,
+};
+use std::{str, str::Utf8Error};
 
-use crate::{Frame, RawLayer};
+#[cfg(feature = "ahash")]
+use ahash::AHashMap as HashMap;
+
+#[cfg(not(feature = "ahash"))]
+use std::collections::HashMap;
 
 const MAGIC_NUMBER: &str = "VOX ";
 
@@ -43,7 +47,7 @@ pub struct Material {
 
 // TODO: maybe material schemas?
 impl Material {
-    /// The '_type' field, if present
+    /// The `_type` field, if present
     pub fn material_type(&self) -> Option<&str> {
         if let Some(t) = self.properties.get("_type") {
             return Some(t.as_str());
@@ -52,93 +56,107 @@ impl Material {
         None
     }
 
-    /// The '_weight' field associated with the material
+    /// The `_weight` field associated with the material
     pub fn weight(&self) -> Option<f32> {
         let w = self.get_f32("_weight");
 
-        if let Some(w) = w && (w < 0.0 || w > 1.0)
-        {
+        if let Some(w) = w && !(0.0..=1.0).contains(&w) {
             debug!("_weight observed outside of range of [0..1]: {}", w);
         }
 
         w
     }
 
-    /// The '_metal' field associated with the material
-    pub fn metal(&self) -> Option<f32> {
+    /// The `_metal` field associated with the material
+    pub fn metalness(&self) -> Option<f32> {
         self.get_f32("_metal")
     }
 
-    /// The '_rough' field associated with the material
+    /// The `_rough` field associated with the material
     pub fn roughness(&self) -> Option<f32> {
         self.get_f32("_rough")
     }
 
-    /// The '_sp' field associated with the material.
-    /// The .vox specification lists this as "_spec".
+    /// The `_sp` field associated with the material.
     pub fn specular(&self) -> Option<f32> {
         self.get_f32("_sp")
     }
 
-    /// The '_ior' field associated with the material
+    /// The `_ior` field associated with the material
     pub fn refractive_index(&self) -> Option<f32> {
         self.get_f32("_ior")
     }
 
-    /// The '_emit' field associated with the material
-    pub fn emit(&self) -> Option<f32> {
+    /// The `_emit` field associated with the material
+    pub fn emission(&self) -> Option<f32> {
         self.get_f32("_emit")
     }
 
-    /// The '_ldr' field associated with the material
-    pub fn ldr(&self) -> Option<f32> {
+    /// The '_ldr' field associated with the material. This is a 'hack' factor
+    /// to scale emissive materials visually by so they look less bright when
+    /// rendered. I.e. this blends between the actual color of the resp.
+    /// voxel (`low_dynamic_range_scale` = 0) and its pure diffuse color
+    /// (`low_dynamic_range_scale` = 1)
+    pub fn low_dynamic_range_scale(&self) -> Option<f32> {
         self.get_f32("_ldr")
     }
 
-    /// The '_ri' field associated with the material (appears to just be 1 + _ior)
+    /// The '_ri' field associated with the material (appears to just be 1 +
+    /// _ior)
     pub fn ri(&self) -> Option<f32> {
         self.get_f32("_ior")
     }
 
-    /// The '_att' field associated with the material
-    pub fn att(&self) -> Option<f32> {
+    /// The `_att` field associated with the `glass` material.
+    ///
+    /// This is the falloff that models the optiocal density of the medium.
+    pub fn attenuation(&self) -> Option<f32> {
         self.get_f32("_att")
     }
 
-    /// The '_flux' field associated with the material
-    pub fn flux(&self) -> Option<f32> {
+    /// The `_flux` field associated with the `emissive` material.
+    pub fn radiant_flux(&self) -> Option<f32> {
         self.get_f32("_flux")
     }
 
-    /// The '_g' field associated with the material
+    /// The `_g` field associated with the material.
     pub fn phase(&self) -> Option<f32> {
         self.get_f32("_g")
     }
 
-    /// The '_alpha' field associated with the material
-    pub fn alpha(&self) -> Option<f32> {
+    /// The `_alpha` field associated with the material.
+    ///
+    /// This is the alpha/blending value that is used to blend the voxel with
+    /// the background (compositing related, has no relation to physics).
+    pub fn opacity(&self) -> Option<f32> {
         self.get_f32("_alpha")
     }
 
-    /// The '_trans' field associated with the material.
-    /// Appears to share the same meaning as _alpha.
+    /// The `_trans` field associated with the material.
+    ///
+    /// This is the transparency of the material. I.e. a physical property,
+    /// honours [`refractive_index()`](Material::refractive_index), see above.
     pub fn transparency(&self) -> Option<f32> {
         self.get_f32("_trans")
     }
 
-    /// The '_d' field associated with the material
+    /// The `_d` field associated with the `cloud` material.
+    ///
+    /// This is the density of the volumetric medium.
     pub fn density(&self) -> Option<f32> {
         self.get_f32("_d")
     }
 
-    /// The '_media' field associated with the material.
-    /// This corresponds to the 'cloud' material.
+    /// The `_media` field associated with the material.
+    /// This corresponds to the `cloud` material.
     pub fn media(&self) -> Option<f32> {
         self.get_f32("_media")
     }
 
-    /// The '_media_type' field associated with the material.
-    /// Corresponds to the type of cloud: absorb, scatter, emissive, subsurface scattering
+    /// The `_media_type` field associated with the material.
+    ///
+    /// Corresponds to the type of `cloud`: `absorb`, `scatter`, `emissive`,
+    /// `subsurface scattering`
     pub fn media_type(&self) -> Option<&str> {
         if let Some(t) = self.properties.get("_media_type") {
             return Some(t.as_str());
@@ -161,7 +179,7 @@ impl Material {
     }
 }
 
-/// General dictionary
+/// General dictionary.
 pub type Dict = HashMap<String, String>;
 
 pub fn to_str(i: &[u8]) -> Result<String, Utf8Error> {
@@ -200,11 +218,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                     Chunk::TransformNode(scene_transform) => {
                         scene.push(SceneNode::Transform {
                             attributes: scene_transform.header.attributes,
-                            frames: scene_transform
-                                .frames
-                                .into_iter()
-                                .map(|attributes| Frame::new(attributes))
-                                .collect(),
+                            frames: scene_transform.frames.into_iter().map(Frame::new).collect(),
                             child: scene_transform.child,
                         });
                     }
@@ -218,7 +232,8 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                     }),
                     Chunk::Layer(layer) => {
                         if layer.id as usize != layers.len() {
-                            // Not sure if this actually happens in practice, but nothing in the spec prohibits it.
+                            // Not sure if this actually happens in practice, but nothing in the
+                            // spec prohibits it.
                             debug!(
                                 "Unexpected layer id {} encountered, layers may be out of order.",
                                 layer.id
@@ -313,8 +328,9 @@ fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
     Chunk::Invalid(chunk_content.to_vec())
 }
 
-// NOTE: this does not seem consistent with the PACK documentation.  However, files with PACK chunks seem rare.
-// It's likely this hasn't been tested.  Is this correct?
+// NOTE: this does not seem consistent with the PACK documentation.  However,
+// files with PACK chunks seem rare. It's likely this hasn't been tested.  Is
+// this correct?
 fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((chunk_content, Chunk::Size(size))) = parse_chunk(chunk_content) {
         if let Ok((_, Chunk::Voxels(voxels))) = parse_chunk(chunk_content) {
