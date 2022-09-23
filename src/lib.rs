@@ -1,4 +1,5 @@
 //! Load [MagicaVoxel](https://ephtracy.github.io/) `.vox` files from Rust.
+#![feature(let_chains)]
 use parser::parse_vox_file;
 use std::{fs::File, io::Read};
 
