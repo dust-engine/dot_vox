@@ -1,7 +1,7 @@
 [package]
 name = "dot_vox"
 edition = "2021"
-version = "4.1.0"
+version = "5.0.0"
 authors = ["David Edmonds <edmonds.d.r@gmail.com>"]
 description = "A Rust library for loading MagicaVoxel .vox files."
 license = "MIT"
