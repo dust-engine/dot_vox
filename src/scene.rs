@@ -1,4 +1,4 @@
-use crate::{Color, Dict};
+use crate::{Color, Dict, Rotation};
 use nom::{
     multi::count,
     number::complete::{le_i32, le_u32},
@@ -212,16 +212,6 @@ impl From<Position> for (i32, i32, i32) {
     }
 }
 
-/// Represents a rotation.  Used to orient a chunk relative to other chunks.
-/// The rotation is represented as a row-major 3×3 matrix (this is how it
-/// appears in the `.vox` format).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Rotation {
-    /// This is a row-major representation of the rotation as an orthonormal 3×3
-    /// matrix. The entries are in [-1..1].
-    rot: [[i8; 3]; 3],
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 /// Represents an animation.  The chunk is oriented according to the rotation
 /// (`_r`) is placed at the position (`t`) specified. The Rotation is
@@ -246,73 +236,7 @@ impl Frame {
             if let IResult::<&str, u8>::Ok((_, byte_rotation)) =
                 nom::character::complete::u8(value.as_str())
             {
-                // .vox stores a row-major rotation in the bits of a byte.
-                //
-                // for example :
-                // R =
-                //  0  1  0
-                //  0  0 -1
-                // -1  0  0
-                // ==>
-                // unsigned char _r = (1 << 0) | (2 << 2) | (0 << 4) | (1 << 5) | (1 << 6)
-                //
-                // bit | value
-                // 0-1 : 1 : index of the non-zero entry in the first row
-                // 2-3 : 2 : index of the non-zero entry in the second row
-                // 4   : 0 : the sign in the first row (0 : positive; 1 : negative)
-                // 5   : 1 : the sign in the second row (0 : positive; 1 : negative)
-                // 6   : 1 : the sign in the third row (0 : positive; 1 : negative)
-
-                // First two indices
-                let index_nz1 = (byte_rotation & 0b11) as usize;
-                let index_nz2 = ((byte_rotation & 0b1100) >> 2) as usize;
-
-                if index_nz1 == index_nz2 {
-                    debug!("'_r' in Frame is not orthnonormal! {}", value);
-                    return None;
-                }
-
-                // You get the third index out via a process of elimination here. It's the one
-                // that wasn't used for the other rows.
-                let possible_thirds = [
-                    index_nz1 == 0 || index_nz2 == 0,
-                    index_nz1 == 1 || index_nz2 == 1,
-                    index_nz1 == 2 || index_nz2 == 2,
-                ];
-
-                let mut index_nz3 = 0;
-
-                for (i, possible_third) in possible_thirds.iter().enumerate() {
-                    if !possible_third {
-                        index_nz3 = i;
-                    }
-                }
-
-                // Values of all three columns (1 or 0)
-                let val_1 = if (byte_rotation & 0b1_0000) >> 4 == 1 {
-                    -1
-                } else {
-                    1
-                };
-                let val_2 = if (byte_rotation & 0b10_0000) >> 5 == 1 {
-                    -1
-                } else {
-                    1
-                };
-                let val_3 = if (byte_rotation & 0b100_0000) >> 6 == 1 {
-                    -1
-                } else {
-                    1
-                };
-
-                // Rows as read from file
-                let mut initial_rows: [[i8; 3]; 3] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-
-                initial_rows[0][index_nz1] = val_1;
-                initial_rows[1][index_nz2] = val_2;
-                initial_rows[2][index_nz3] = val_3;
-
-                return Some(Rotation { rot: initial_rows });
+                return Some(Rotation::from_byte(byte_rotation))
             } else {
                 debug!("'_r' attribute for Frame could not be parsed! {}", value);
             }
