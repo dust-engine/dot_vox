@@ -1,4 +1,4 @@
-use crate::Dict;
+use crate::{Color, Dict};
 use nom::{
     multi::count,
     number::complete::{le_i32, le_u32},
@@ -74,14 +74,6 @@ pub struct SceneShape {
     pub models: Vec<ShapeModel>,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-/// A color stored as sRGB.
-pub struct Color {
-    r: u8,
-    g: u8,
-    b: u8,
-}
-
 /// Layer information (raw).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RawLayer {
@@ -125,7 +117,7 @@ impl Layer {
                     nom::character::complete::u8,
                 ))(x.as_str())
             {
-                return Some(Color { r, g, b });
+                return Some(Color { r, g, b, a: 0 });
             } else {
                 debug!(
                     "Encountered _color attribute in layer that appears to be malformed: {}",

@@ -3,8 +3,6 @@
 use parser::parse_vox_file;
 use std::{fs::File, io::Read};
 
-#[cfg(test)]
-extern crate env_logger;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -29,6 +27,7 @@ pub use model::Voxel;
 
 pub use scene::*;
 
+pub use palette::Color;
 pub use palette::DEFAULT_PALETTE;
 
 /// Loads the supplied [MagicaVoxel](https://ephtracy.github.io/) `.vox` file
@@ -285,7 +284,7 @@ mod tests {
     }
 
     fn placeholder(
-        palette: Vec<u32>,
+        palette: Vec<Color>,
         materials: Vec<Material>,
         scenes: Vec<SceneNode>,
         layers: Vec<Layer>,
@@ -393,7 +392,6 @@ mod tests {
 
     #[test]
     fn can_parse_vox_file_with_materials() {
-        env_logger::init();
         let bytes = include_bytes!("resources/placeholder-with-materials.vox").to_vec();
         let result = super::parse_vox_file(&bytes);
         assert!(result.is_ok());

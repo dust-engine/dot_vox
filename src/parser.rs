@@ -1,5 +1,5 @@
 use crate::{
-    model, palette, scene, DotVoxData, Frame, Layer, Model, RawLayer, SceneGroup, SceneNode,
+    model, palette, scene, Color, DotVoxData, Frame, Layer, Model, RawLayer, SceneGroup, SceneNode,
     SceneShape, SceneTransform, Size, Voxel, DEFAULT_PALETTE,
 };
 use nom::{
@@ -26,7 +26,7 @@ pub enum Chunk {
     Size(Size),
     Voxels(Vec<Voxel>),
     Pack(Model),
-    Palette(Vec<u32>),
+    Palette(Vec<Color>),
     Material(Material),
     TransformNode(SceneTransform),
     GroupNode(SceneGroup),
@@ -199,7 +199,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
         Chunk::Main(children) => {
             let mut size_holder: Option<Size> = None;
             let mut models: Vec<Model> = vec![];
-            let mut palette_holder: Vec<u32> = DEFAULT_PALETTE.to_vec();
+            let mut palette_holder: Vec<Color> = DEFAULT_PALETTE.to_vec();
             let mut materials: Vec<Material> = vec![];
             let mut scene: Vec<SceneNode> = vec![];
             let mut layers: Vec<Layer> = Vec::new();
