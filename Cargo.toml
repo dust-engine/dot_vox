@@ -15,7 +15,6 @@ readme = "README.md"
 default = ["ahash"]
 
 [dependencies]
-byteorder = "^1.4.3"
 lazy_static = "^1.4"
 log = "^0.4"
 nom = { version = "^7", default-features = false, features = ["alloc"] }
@@ -23,4 +22,3 @@ ahash = { version = "^0.8", optional = true }
 
 [dev-dependencies]
 avow = "0.2.0"
-env_logger = "^0.9"

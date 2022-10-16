@@ -1,4 +1,4 @@
-use crate::{Layer, Material, Model, SceneNode};
+use crate::{Color, Layer, Material, Model, SceneNode};
 use std::io::{self, Write};
 
 /// Container for `.vox` file data.
@@ -9,7 +9,7 @@ pub struct DotVoxData {
     /// A `Vec` of all the models contained within this file.
     pub models: Vec<Model>,
     /// A `Vec` containing the colour palette as 32-bit integers
-    pub palette: Vec<u32>,
+    pub palette: Vec<Color>,
     /// A `Vec` containing all the [`Material`]s set.
     pub materials: Vec<Material>,
     /// Scene. The first node in this list is always the root node.
@@ -92,7 +92,8 @@ impl DotVoxData {
     fn write_palette_chunk<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
         let mut chunk = Vec::new();
         for color in self.palette.iter() {
-            chunk.extend_from_slice(&color.to_le_bytes());
+            let color: [u8; 4] = color.into();
+            chunk.extend_from_slice(&color);
         }
 
         Self::write_leaf_chunk(writer, "RGBA", &chunk)
