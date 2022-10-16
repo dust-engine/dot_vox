@@ -22,3 +22,4 @@ ahash = { version = "^0.8", optional = true }
 
 [dev-dependencies]
 avow = "0.2.0"
+glam = "0.21"

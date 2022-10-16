@@ -16,6 +16,9 @@ mod model;
 mod palette;
 mod parser;
 mod scene;
+mod types;
+
+pub use types::Rotation;
 
 pub use dot_vox_data::DotVoxData;
 
