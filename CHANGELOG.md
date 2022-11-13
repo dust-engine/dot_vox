@@ -1,3 +1,15 @@
+5.1.0
+=====
+
+- Added rotation type
+
+5.0.0
+=====
+
+- Added scenegraph support ([#23](https://github.com/dust-engine/dot_vox/pull/23))
+- Upgrade parser to nom 7
+- Upgrade to Rust 2021
+
 4.1.0
 =====
 
