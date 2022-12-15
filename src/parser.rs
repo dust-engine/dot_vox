@@ -60,8 +60,10 @@ impl Material {
     pub fn weight(&self) -> Option<f32> {
         let w = self.get_f32("_weight");
 
-        if let Some(w) = w && !(0.0..=1.0).contains(&w) {
-            debug!("_weight observed outside of range of [0..1]: {}", w);
+        if let Some(w) = w {
+            if !(0.0..=1.0).contains(&w) {
+                debug!("_weight observed outside of range of [0..1]: {}", w);
+            }
         }
 
         w
