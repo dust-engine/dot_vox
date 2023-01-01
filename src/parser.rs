@@ -25,7 +25,6 @@ pub enum Chunk {
     Main(Vec<Chunk>),
     Size(Size),
     Voxels(Vec<Voxel>),
-    Pack(Model),
     Palette(Vec<Color>),
     Material(Material),
     TransformNode(SceneTransform),
@@ -214,7 +213,6 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                             models.push(Model { size, voxels })
                         }
                     }
-                    Chunk::Pack(model) => models.push(model),
                     Chunk::Palette(palette) => palette_holder = palette,
                     Chunk::Material(material) => materials.push(material),
                     Chunk::TransformNode(scene_transform) => {
@@ -285,7 +283,6 @@ fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content
         match id {
             "SIZE" => build_size_chunk(chunk_content),
             "XYZI" => build_voxel_chunk(chunk_content),
-            "PACK" => build_pack_chunk(chunk_content),
             "RGBA" => build_palette_chunk(chunk_content),
             "MATL" => build_material_chunk(chunk_content),
             "nTRN" => build_scene_transform_chunk(chunk_content),
@@ -308,7 +305,6 @@ fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content
         };
         match id {
             "MAIN" => Chunk::Main(child_chunks),
-            "PACK" => build_pack_chunk(chunk_content),
             _ => {
                 debug!("Unknown chunk with children {:?}", id);
                 Chunk::Unknown(id.to_owned())
@@ -327,21 +323,6 @@ fn build_material_chunk(chunk_content: &[u8]) -> Chunk {
 fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((_, palette)) = palette::extract_palette(chunk_content) {
         return Chunk::Palette(palette);
-    }
-    Chunk::Invalid(chunk_content.to_vec())
-}
-
-// NOTE: this does not seem consistent with the PACK documentation.  However,
-// files with PACK chunks seem rare. It's likely this hasn't been tested.  Is
-// this correct?
-fn build_pack_chunk(chunk_content: &[u8]) -> Chunk {
-    if let Ok((chunk_content, Chunk::Size(size))) = parse_chunk(chunk_content) {
-        if let Ok((_, Chunk::Voxels(voxels))) = parse_chunk(chunk_content) {
-            return Chunk::Pack(Model {
-                size,
-                voxels: voxels.to_vec(),
-            });
-        }
     }
     Chunk::Invalid(chunk_content.to_vec())
 }
