@@ -49,25 +49,11 @@ impl DotVoxData {
     }
 
     fn write_models<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
-        if self.models.len() > 1 {
-            self.write_pack_chunk(writer)?;
-        }
         for model in self.models.iter() {
             Self::write_model(writer, model)?;
         }
 
         Ok(())
-    }
-
-    fn write_pack_chunk<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
-        let chunk = (self.models.len() as u32).to_le_bytes();
-
-        let mut num_children_bytes = 0;
-        for model in self.models.iter() {
-            num_children_bytes += model.num_vox_bytes();
-        }
-
-        Self::write_chunk(writer, "PACK", &chunk, num_children_bytes)
     }
 
     fn write_model<W: Write>(writer: &mut W, model: &Model) -> Result<(), io::Error> {
