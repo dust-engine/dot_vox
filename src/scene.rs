@@ -219,7 +219,7 @@ impl From<Position> for (i32, i32, i32) {
 /// interpolated across the sequence of Frames using their positions.
 pub struct Frame {
     /// The raw attributes as parsed from the .vox
-    attributes: Dict,
+    pub attributes: Dict,
 }
 
 impl Frame {
@@ -236,7 +236,7 @@ impl Frame {
             if let IResult::<&str, u8>::Ok((_, byte_rotation)) =
                 nom::character::complete::u8(value.as_str())
             {
-                return Some(Rotation::from_byte(byte_rotation))
+                return Some(Rotation::from_byte(byte_rotation));
             } else {
                 debug!("'_r' attribute for Frame could not be parsed! {}", value);
             }
