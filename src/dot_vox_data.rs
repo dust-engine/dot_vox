@@ -1,4 +1,4 @@
-use crate::{Color, Layer, Material, Model, SceneNode};
+use crate::{Color, Dict, Layer, Material, Model, SceneNode};
 use std::io::{self, Write};
 
 /// Container for `.vox` file data.
@@ -27,6 +27,7 @@ impl DotVoxData {
         // Write out all of the children of MAIN first to get the number of bytes.
         let mut children_buffer = Vec::new();
         self.write_models(&mut children_buffer)?;
+        self.write_scene_graph(&mut children_buffer)?;
         self.write_palette_chunk(&mut children_buffer)?;
         let num_main_children_bytes = children_buffer.len() as u32;
 
@@ -73,6 +74,79 @@ impl DotVoxData {
             xyzi_chunk.push(voxel.i + 1);
         }
         Self::write_leaf_chunk(writer, "XYZI", &xyzi_chunk)
+    }
+
+    fn write_string(buffer: &mut Vec<u8>, str: &String) {
+        buffer.extend_from_slice(&((str.len() as u32).to_le_bytes()));
+        buffer.extend_from_slice(&str.as_bytes());
+    }
+
+    fn write_dict(buffer: &mut Vec<u8>, dict: &Dict) {
+        buffer.extend_from_slice(&((dict.len() as u32).to_le_bytes()));
+        for (key, value) in dict.iter() {
+            Self::write_string(buffer, key);
+            Self::write_string(buffer, value);
+        }
+    }
+
+    fn write_scene_graph<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
+        for (i, node) in self.scenes.iter().enumerate() {
+            Self::write_scene_node(writer, node, i as u32)?;
+        }
+
+        Ok(())
+    }
+
+    fn write_scene_node<W: Write>(
+        writer: &mut W,
+        node: &SceneNode,
+        i: u32,
+    ) -> Result<(), io::Error> {
+        let id;
+        let mut node_chunk = Vec::new();
+        match node {
+            SceneNode::Group {
+                attributes,
+                children,
+            } => {
+                id = "nGRP";
+                node_chunk.extend_from_slice(&(i as u32).to_le_bytes());
+                Self::write_dict(&mut node_chunk, &attributes);
+                node_chunk.extend_from_slice(&((children.len() as u32).to_le_bytes()));
+                for child in children {
+                    node_chunk.extend_from_slice(&child.to_le_bytes());
+                }
+            }
+            SceneNode::Transform {
+                frames,
+                child,
+                layer_id,
+                attributes,
+            } => {
+                id = "nTRN";
+                node_chunk.extend_from_slice(&(i as u32).to_le_bytes());
+                Self::write_dict(&mut node_chunk, &attributes);
+                node_chunk.extend_from_slice(&child.to_le_bytes());
+                node_chunk.extend_from_slice(&u32::MAX.to_le_bytes());
+                node_chunk.extend_from_slice(&layer_id.to_le_bytes());
+                node_chunk.extend_from_slice(&(frames.len() as u32).to_le_bytes());
+                for frame in frames {
+                    Self::write_dict(&mut node_chunk, &frame.attributes);
+                }
+            }
+            SceneNode::Shape { attributes, models } => {
+                id = "nSHP";
+                node_chunk.extend_from_slice(&(i as u32).to_le_bytes());
+                Self::write_dict(&mut node_chunk, &attributes);
+                node_chunk.extend_from_slice(&(models.len() as u32).to_le_bytes());
+                for model in models {
+                    node_chunk.extend_from_slice(&model.model_id.to_le_bytes());
+                    Self::write_dict(&mut node_chunk, &model.attributes);
+                }
+            }
+        }
+
+        Self::write_leaf_chunk(writer, id, &node_chunk)
     }
 
     fn write_palette_chunk<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {

@@ -224,7 +224,7 @@ impl From<Position> for (i32, i32, i32) {
 /// interpolated across the sequence of Frames using their positions.
 pub struct Frame {
     /// The raw attributes as parsed from the .vox
-    attributes: Dict,
+    pub attributes: Dict,
 }
 
 impl Frame {
