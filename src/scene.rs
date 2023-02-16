@@ -1,4 +1,6 @@
-use crate::{Color, Dict, Rotation};
+use std::mem::size_of;
+
+use crate::{parser::validate_count, Color, Dict, Rotation};
 use nom::{
     multi::count,
     number::complete::{le_i32, le_u32},
@@ -152,7 +154,8 @@ pub fn parse_scene_transform(i: &[u8]) -> IResult<&[u8], SceneTransform> {
     let (i, _ignored) = le_i32(i)?;
     let (i, layer_id) = le_u32(i)?;
     let (i, frame_count) = le_u32(i)?;
-    let (i, frames) = count(parse_dict, frame_count as usize)(i)?;
+    let frame_count = validate_count(i, frame_count, size_of::<u32>())?;
+    let (i, frames) = count(parse_dict, frame_count)(i)?;
     Ok((
         i,
         SceneTransform {
@@ -167,14 +170,16 @@ pub fn parse_scene_transform(i: &[u8]) -> IResult<&[u8], SceneTransform> {
 pub fn parse_scene_group(i: &[u8]) -> IResult<&[u8], SceneGroup> {
     let (i, header) = parse_node_header(i)?;
     let (i, child_count) = le_u32(i)?;
-    let (i, children) = count(le_u32, child_count as usize)(i)?;
+    let child_count = validate_count(i, child_count, size_of::<u32>())?;
+    let (i, children) = count(le_u32, child_count)(i)?;
     Ok((i, SceneGroup { header, children }))
 }
 
 pub fn parse_scene_shape(i: &[u8]) -> IResult<&[u8], SceneShape> {
     let (i, header) = parse_node_header(i)?;
     let (i, model_count) = le_u32(i)?;
-    let (i, models) = count(parse_scene_shape_model, model_count as usize)(i)?;
+    let model_count = validate_count(i, model_count, size_of::<u32>() * 2)?;
+    let (i, models) = count(parse_scene_shape_model, model_count)(i)?;
     Ok((i, SceneShape { header, models }))
 }
 
@@ -236,7 +241,7 @@ impl Frame {
             if let IResult::<&str, u8>::Ok((_, byte_rotation)) =
                 nom::character::complete::u8(value.as_str())
             {
-                return Some(Rotation::from_byte(byte_rotation))
+                return Some(Rotation::from_byte(byte_rotation));
             } else {
                 debug!("'_r' attribute for Frame could not be parsed! {}", value);
             }

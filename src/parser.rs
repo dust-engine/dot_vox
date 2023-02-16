@@ -5,12 +5,13 @@ use crate::{
 use nom::{
     bytes::complete::{tag, take},
     combinator::{flat_map, map_res},
+    error::make_error,
     multi::{fold_many_m_n, many0},
     number::complete::le_u32,
     sequence::pair,
     IResult,
 };
-use std::{str, str::Utf8Error};
+use std::{mem::size_of, str, str::Utf8Error};
 
 #[cfg(feature = "ahash")]
 use ahash::AHashMap as HashMap;
@@ -395,13 +396,14 @@ pub fn parse_material(i: &[u8]) -> IResult<&[u8], Material> {
 
 pub(crate) fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
     let (i, n) = le_u32(i)?;
+    let n = validate_count(i, n, size_of::<u32>() * 2)?;
 
-    let init = move || Dict::with_capacity(n as usize);
+    let init = move || Dict::with_capacity(n);
     let fold = |mut map: Dict, (key, value)| {
         map.insert(key, value);
         map
     };
-    fold_many_m_n(n as usize, n as usize, parse_dict_entry, init, fold)(i)
+    fold_many_m_n(n, n, parse_dict_entry, init, fold)(i)
 }
 
 fn parse_dict_entry(i: &[u8]) -> IResult<&[u8], (String, String)> {
@@ -411,6 +413,35 @@ fn parse_dict_entry(i: &[u8]) -> IResult<&[u8], (String, String)> {
 fn parse_string(i: &[u8]) -> IResult<&[u8], String> {
     let bytes = flat_map(le_u32, take);
     map_res(bytes, to_str)(i)
+}
+
+/// Validate that a given count of items is possible to achieve given the size of the
+/// input, then convert it to [`usize`].
+///
+/// This ensures that parsing an invalid/malicious file cannot cause excessive memory
+/// allocation in the form of data structures' capacity. It should be used whenever
+/// [`nom::multi::count`] or a `with_capacity()` function is used with a count taken from
+/// the file.
+///
+/// `minimum_object_size` must not be smaller than the minimum possible size of a parsed
+/// value.
+pub(crate) fn validate_count(
+    i: &[u8],
+    count: u32,
+    minimum_object_size: usize,
+) -> Result<usize, nom::Err<nom::error::Error<&[u8]>>> {
+    let Ok(count) = usize::try_from(count) else {
+        return Err(nom::Err::Failure(make_error(i, nom::error::ErrorKind::TooLarge)));
+    };
+
+    if count > i.len() / minimum_object_size {
+        Err(nom::Err::Failure(make_error(
+            i,
+            nom::error::ErrorKind::TooLarge,
+        )))
+    } else {
+        Ok(count)
+    }
 }
 
 #[cfg(test)]
