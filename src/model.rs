@@ -5,6 +5,8 @@ use nom::{
     IResult,
 };
 
+use crate::parser::validate_count;
+
 /// A renderable voxel model.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Model {
@@ -71,5 +73,6 @@ fn parse_voxel(input: &[u8]) -> IResult<&[u8], Voxel> {
 
 pub fn parse_voxels(i: &[u8]) -> IResult<&[u8], Vec<Voxel>> {
     let (i, n) = le_u32(i)?;
-    count(parse_voxel, n as usize)(i)
+    let n = validate_count(i, n, 4)?;
+    count(parse_voxel, n)(i)
 }
