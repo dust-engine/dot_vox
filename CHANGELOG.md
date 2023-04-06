@@ -1,3 +1,11 @@
+5.1.1
+=====
+
+- Removed use of `let_chain` to restore compatibility with stable Rust
+- Validate counts of parsed objects before allocating memory for them
+- Ignore PACK chunks for read / write
+- Added serialization for scene graphs
+
 5.1.0
 =====
 
