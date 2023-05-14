@@ -439,10 +439,10 @@ mod tests {
     }
 
     #[test]
-    fn can_write_vox_format_without_materials() {
+    fn can_write_vox_format() {
         write_and_load(placeholder(
             DEFAULT_PALETTE.to_vec(),
-            Vec::new(),
+            DEFAULT_MATERIALS.to_vec(),
             Vec::new(),
             Vec::new(),
         ));

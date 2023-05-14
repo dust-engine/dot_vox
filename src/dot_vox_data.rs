@@ -20,7 +20,6 @@ pub struct DotVoxData {
 
 impl DotVoxData {
     /// Serializes `self` in the `.vox` format.
-    /// TODO: write the material set
     pub fn write_vox<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
         self.write_header(writer)?;
 
@@ -29,6 +28,7 @@ impl DotVoxData {
         self.write_models(&mut children_buffer)?;
         self.write_scene_graph(&mut children_buffer)?;
         self.write_palette_chunk(&mut children_buffer)?;
+        self.write_materials(&mut children_buffer)?;
         let num_main_children_bytes = children_buffer.len() as u32;
 
         self.write_main_chunk(writer, num_main_children_bytes)?;
@@ -157,6 +157,16 @@ impl DotVoxData {
         }
 
         Self::write_leaf_chunk(writer, "RGBA", &chunk)
+    }
+
+    fn write_materials<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
+        for material in self.materials.iter() {
+            let mut chunk = Vec::new();
+            chunk.extend_from_slice(&material.id.to_le_bytes());
+            Self::write_dict(&mut chunk, &material.properties);
+            Self::write_leaf_chunk(writer, "MATL", &chunk)?;
+        }
+        Ok(())
     }
 
     fn write_leaf_chunk<W: Write>(writer: &mut W, id: &str, chunk: &[u8]) -> Result<(), io::Error> {
