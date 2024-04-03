@@ -29,6 +29,7 @@ impl DotVoxData {
         self.write_scene_graph(&mut children_buffer)?;
         self.write_palette_chunk(&mut children_buffer)?;
         self.write_materials(&mut children_buffer)?;
+        self.write_layers(&mut children_buffer)?;
         let num_main_children_bytes = children_buffer.len() as u32;
 
         self.write_main_chunk(writer, num_main_children_bytes)?;
@@ -165,6 +166,18 @@ impl DotVoxData {
             chunk.extend_from_slice(&material.id.to_le_bytes());
             Self::write_dict(&mut chunk, &material.properties);
             Self::write_leaf_chunk(writer, "MATL", &chunk)?;
+        }
+        Ok(())
+    }
+
+    fn write_layers<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
+        for (i, layer) in self.layers.iter().enumerate() {
+            let id = i as u32;
+            let mut chunk = Vec::new();
+            chunk.extend_from_slice(&id.to_le_bytes());
+            Self::write_dict(&mut chunk, &layer.attributes);
+            chunk.extend_from_slice(&u32::MAX.to_le_bytes());
+            Self::write_leaf_chunk(writer, "LAYR", &chunk)?;
         }
         Ok(())
     }

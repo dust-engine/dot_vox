@@ -443,8 +443,8 @@ mod tests {
         write_and_load(placeholder(
             DEFAULT_PALETTE.to_vec(),
             DEFAULT_MATERIALS.to_vec(),
-            Vec::new(),
-            Vec::new(),
+            placeholder::SCENES.to_vec(),
+            placeholder::LAYERS.to_vec(),
         ));
     }
 }
