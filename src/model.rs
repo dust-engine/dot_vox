@@ -40,7 +40,7 @@ pub struct Size {
 
 /// A voxel.
 ///
-/// A point in 3D space, with an indexed color attached.
+/// A point in 3D space, with an indexed color attached. Uses Right handed Z up coordinate system.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Voxel {
     /// The X coordinate for the voxel.
