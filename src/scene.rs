@@ -294,11 +294,11 @@ impl Frame {
 /// [`DotVoxData`](crate::dot_vox_data::DotVoxData).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SceneNode {
-    /// Transform Node Chunk (nTRN)
+    /// Transform Node Chunk (nTRN). Uses Right handed Z up coordinate system.
     Transform {
         /// Attributes.
         attributes: Dict,
-        /// Transform frames.
+        /// Transform frames. _t attribute contains translation in every frame.
         frames: Vec<Frame>,
         /// Child node of this transform node.
         child: u32,
