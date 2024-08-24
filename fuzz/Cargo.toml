@@ -1,0 +1,22 @@
+[package]
+name = "dot_vox-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+dot_vox = { path = ".." }
+libfuzzer-sys = "0.4"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_load_bytes"
+path = "fuzz_targets/fuzz_load_bytes.rs"
+test = false
+doc = false
