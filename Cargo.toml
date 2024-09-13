@@ -23,3 +23,8 @@ ahash = { version = "^0.8", optional = true }
 [dev-dependencies]
 avow = "0.2.0"
 glam = "0.21"
+nalgebra = "^0.33" # for the traverse_graph example
+
+[[example]]
+name = "traverse_graph"
+path = "examples/traverse_graph.rs"
