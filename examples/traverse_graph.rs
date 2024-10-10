@@ -1,7 +1,7 @@
 use dot_vox::{DotVoxData, Model, Rotation, SceneNode};
 use glam::Vec3;
 
-fn iterate_vox_tree(vox_tree: &DotVoxData, mut f: impl FnMut(&Model, &Vec3, &Rotation)) {
+fn iterate_vox_tree(vox_tree: &DotVoxData, mut fun: impl FnMut(&Model, &Vec3, &Rotation)) {
     // The stack for maintaining iteration state.
     // 0 : index inside scene vector
     // 1 : node global translation
@@ -23,7 +23,7 @@ fn iterate_vox_tree(vox_tree: &DotVoxData, mut f: impl FnMut(&Model, &Vec3, &Rot
         }
     }
 
-    while 0 < node_stack.len() {
+    while !node_stack.is_empty() {
         let (current_node, translation, rotation, index) = *node_stack.last().unwrap();
         match &vox_tree.scenes[current_node as usize] {
             SceneNode::Transform {
@@ -61,6 +61,8 @@ fn iterate_vox_tree(vox_tree: &DotVoxData, mut f: impl FnMut(&Model, &Vec3, &Rot
                 // the index variable for a Transform stores whether to go above or below a level next
                 if 0 == index {
                     // 0 == index ==> iterate into the child of the translation
+                    // Also update index value to mark this stack item to be removed the next time it is encountered,
+                    // Which is going to be after the algo is done with the child nodes of this node
                     node_stack.last_mut().unwrap().3 += 1;
                     node_stack.push((*child, translation, orientation, 0));
                 } else {
@@ -92,22 +94,14 @@ fn iterate_vox_tree(vox_tree: &DotVoxData, mut f: impl FnMut(&Model, &Vec3, &Rot
                         &rotation,
                     );
                 }
-                node_stack.pop();
+                node_stack.pop(); // stack popped to the parent
                 if let Some(parent) = node_stack.last_mut() {
+                    // Update the index of the parent group to go to the next child
                     parent.3 += 1;
                 }
             }
         }
     }
-}
-
-fn transform(vec: Vec3, rotation: &Rotation) -> Vec3 {
-    let matrix = rotation.to_cols_array_2d();
-    Vec3::new(
-        vec.x * matrix[0][0] + vec.y * matrix[0][1] + vec.z * matrix[0][2],
-        vec.x * matrix[1][0] + vec.y * matrix[1][1] + vec.z * matrix[1][2],
-        vec.x * matrix[2][0] + vec.y * matrix[2][1] + vec.z * matrix[2][2],
-    )
 }
 
 fn main() {
@@ -116,15 +110,13 @@ fn main() {
         .expect("Expected a valid vox file");
 
     iterate_vox_tree(&vox_tree, |model, position, orientation| {
-        let model_size = transform(
-            //conversion to Vec3<i32> is required, because orientation might negate the sign of the size components
-            Vec3::new(
+        //conversion to Vec3<i32> is required, because orientation might negate the sign of the size components
+        let model_size = glam::Mat3::from_cols_array_2d(&orientation.to_cols_array_2d())
+            * Vec3::new(
                 model.size.x as f32,
                 model.size.y as f32,
                 model.size.z as f32,
-            ),
-            orientation,
-        );
+            );
 
         // The global position points to the middle of the model, the element at [0][0][0] is at the bottom left corner
         println!(
