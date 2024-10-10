@@ -1,7 +1,7 @@
 use dot_vox::{DotVoxData, Model, Rotation, SceneNode};
 use glam::Vec3;
 
-fn iterate_vox_tree<F: FnMut(&Model, &Vec3, &Rotation) -> ()>(vox_tree: &DotVoxData, mut fun: F) {
+fn iterate_vox_tree(vox_tree: &DotVoxData, mut f: impl FnMut(&Model, &Vec3, &Rotation)) {
     // The stack for maintaining iteration state.
     // 0 : index inside scene vector
     // 1 : node global translation
