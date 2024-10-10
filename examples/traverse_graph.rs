@@ -2,7 +2,7 @@ use dot_vox::{DotVoxData, Model, Rotation, SceneNode};
 use glam::Vec3;
 
 fn iterate_vox_tree<F: FnMut(&Model, &Vec3, &Rotation) -> ()>(vox_tree: &DotVoxData, mut fun: F) {
-    // An iterator for each level of depth, during depth-first search:
+    // The stack for maintaining iteration state.
     // 0 : index inside scene vector
     // 1 : node global translation
     // 2 : node global rotation
