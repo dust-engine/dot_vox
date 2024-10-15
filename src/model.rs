@@ -20,7 +20,8 @@ impl Model {
     /// Number of bytes when encoded in `.vox` format.
     pub fn num_vox_bytes(&self) -> u32 {
         // The number 40 comes from:
-        // - 24 bytes for the chunk header format (SIZE/XYZI labels, chunk and child sizes, etc.)
+        // - 24 bytes for the chunk header format (SIZE/XYZI labels, chunk and child
+        //   sizes, etc.)
         // - 12 bytes for the SIZE contents (x, y, z)
         // - 4 bytes for the voxel length u32
         40 + 4 * self.voxels.len() as u32
@@ -40,7 +41,8 @@ pub struct Size {
 
 /// A voxel.
 ///
-/// A point in 3D space, with an indexed color attached. Uses Right handed Z up coordinate system.
+/// A point in 3D space, with an indexed color attached. Uses Right handed Z up
+/// coordinate system.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Voxel {
     /// The X coordinate for the voxel.

@@ -396,23 +396,26 @@ fn parse_string(i: &[u8]) -> IResult<&[u8], String> {
     map_res(bytes, to_str)(i)
 }
 
-/// Validate that a given count of items is possible to achieve given the size of the
-/// input, then convert it to [`usize`].
+/// Validate that a given count of items is possible to achieve given the size
+/// of the input, then convert it to [`usize`].
 ///
-/// This ensures that parsing an invalid/malicious file cannot cause excessive memory
-/// allocation in the form of data structures' capacity. It should be used whenever
-/// [`nom::multi::count`] or a `with_capacity()` function is used with a count taken from
-/// the file.
+/// This ensures that parsing an invalid/malicious file cannot cause excessive
+/// memory allocation in the form of data structures' capacity. It should be
+/// used whenever [`nom::multi::count`] or a `with_capacity()` function is used
+/// with a count taken from the file.
 ///
-/// `minimum_object_size` must not be smaller than the minimum possible size of a parsed
-/// value.
+/// `minimum_object_size` must not be smaller than the minimum possible size of
+/// a parsed value.
 pub(crate) fn validate_count(
     i: &[u8],
     count: u32,
     minimum_object_size: usize,
 ) -> Result<usize, nom::Err<nom::error::Error<&[u8]>>> {
     let Ok(count) = usize::try_from(count) else {
-        return Err(nom::Err::Failure(make_error(i, nom::error::ErrorKind::TooLarge)));
+        return Err(nom::Err::Failure(make_error(
+            i,
+            nom::error::ErrorKind::TooLarge,
+        )));
     };
 
     if count > i.len() / minimum_object_size {
