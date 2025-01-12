@@ -51,7 +51,7 @@ pub struct Voxel {
     pub y: u8,
     /// The Z coordinate for the voxel.
     pub z: u8,
-    /// Index in the color palette. Note that this will be oen less than the
+    /// Index in the color palette. Note that this will be one less than the
     /// value stored in the source file, as the palette indices run from
     /// 1--255, whereas in memory the indices run from 0--254. Therefore, to
     /// make life easier, we store the in-memory index here. Should you
