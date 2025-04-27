@@ -61,7 +61,7 @@ fn iterate_vox_tree_inner(
                             .expect("Expected valid u8 byte to parse rotation matrix"),
                     )
             } else {
-                rotation
+                Rotation::IDENTITY
             };
 
             iterate_vox_tree_inner(vox_tree, *child, translation, rotation, fun);
