@@ -6,6 +6,10 @@ use std::io::{self, Write};
 pub struct DotVoxData {
     /// The version number of the `.vox` file.
     pub version: u32,
+    /// A mapping from [`crate::model::Voxel::i`] values to palette indices. In
+    /// the MagicaVoxel editor, this table gets reordered when dragging
+    /// palette entries around with control-click.
+    pub index_map: Vec<u8>,
     /// A `Vec` of all the models contained within this file.
     pub models: Vec<Model>,
     /// A `Vec` containing the colour palette as 32-bit integers

@@ -1,6 +1,8 @@
 use crate::{
-    model, palette, scene, Color, DotVoxData, Frame, Layer, Model, RawLayer, SceneGroup, SceneNode,
-    SceneShape, SceneTransform, Size, Voxel, DEFAULT_PALETTE,
+    model,
+    palette::{self, DEFAULT_INDEX_MAP},
+    scene, Color, DotVoxData, Frame, Layer, Model, RawLayer, SceneGroup, SceneNode, SceneShape,
+    SceneTransform, Size, Voxel, DEFAULT_PALETTE,
 };
 use nom::{
     bytes::complete::{tag, take},
@@ -32,6 +34,7 @@ pub enum Chunk {
     GroupNode(SceneGroup),
     ShapeNode(SceneShape),
     Layer(RawLayer),
+    IndexMap(Vec<u8>),
     Unknown(String),
     Invalid(Vec<u8>),
 }
@@ -201,6 +204,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
         Chunk::Main(children) => {
             let mut size_holder: Option<Size> = None;
             let mut models: Vec<Model> = vec![];
+            let mut index_map_holder = DEFAULT_INDEX_MAP.to_vec();
             let mut palette_holder: Vec<Color> = DEFAULT_PALETTE.to_vec();
             let mut materials: Vec<Material> = vec![];
             let mut scene: Vec<SceneNode> = vec![];
@@ -214,6 +218,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
                             models.push(Model { size, voxels })
                         }
                     }
+                    Chunk::IndexMap(index_map) => index_map_holder = index_map,
                     Chunk::Palette(palette) => palette_holder = palette,
                     Chunk::Material(material) => materials.push(material),
                     Chunk::TransformNode(scene_transform) => {
@@ -253,6 +258,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
             DotVoxData {
                 version,
                 models,
+                index_map: index_map_holder,
                 palette: palette_holder,
                 materials,
                 scenes: scene,
@@ -262,6 +268,7 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
         _ => DotVoxData {
             version,
             models: vec![],
+            index_map: vec![],
             palette: vec![],
             materials: vec![],
             scenes: vec![],
@@ -290,6 +297,7 @@ fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content
             "nGRP" => build_scene_group_chunk(chunk_content),
             "nSHP" => build_scene_shape_chunk(chunk_content),
             "LAYR" => build_layer_chunk(chunk_content),
+            "IMAP" => build_imap_chunk(chunk_content),
             _ => {
                 debug!("Unknown childless chunk {:?}", id);
                 Chunk::Unknown(id.to_owned())
@@ -324,6 +332,13 @@ fn build_material_chunk(chunk_content: &[u8]) -> Chunk {
 fn build_palette_chunk(chunk_content: &[u8]) -> Chunk {
     if let Ok((_, palette)) = palette::extract_palette(chunk_content) {
         return Chunk::Palette(palette);
+    }
+    Chunk::Invalid(chunk_content.to_vec())
+}
+
+fn build_imap_chunk(chunk_content: &[u8]) -> Chunk {
+    if let Ok((_, index_map)) = palette::extract_index_map(chunk_content) {
+        return Chunk::IndexMap(index_map.to_vec());
     }
     Chunk::Invalid(chunk_content.to_vec())
 }

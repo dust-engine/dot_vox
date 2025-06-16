@@ -31,6 +31,7 @@ pub use model::Voxel;
 pub use scene::*;
 
 pub use palette::Color;
+pub use palette::DEFAULT_INDEX_MAP;
 pub use palette::DEFAULT_PALETTE;
 
 /// Loads the supplied [MagicaVoxel](https://ephtracy.github.io/) `.vox` file
@@ -92,6 +93,7 @@ pub use palette::DEFAULT_PALETTE;
 ///                 }
 ///             )
 ///         }),
+///         index_map: DEFAULT_INDEX_MAP.to_vec(),
 ///         palette: DEFAULT_PALETTE.to_vec(),
 ///         materials: (0..256)
 ///             .into_iter()
@@ -183,6 +185,7 @@ pub fn load(filename: &str) -> Result<DotVoxData, &'static str> {
 ///                 }
 ///             )
 ///         }),
+///         index_map: DEFAULT_INDEX_MAP.to_vec(),
 ///         palette: DEFAULT_PALETTE.to_vec(),
 ///         materials: (0..256)
 ///             .into_iter()
@@ -265,6 +268,8 @@ pub mod placeholder {
 
 #[cfg(test)]
 mod tests {
+    use crate::palette::DEFAULT_INDEX_MAP;
+
     use super::*;
     use avow::vec;
 
@@ -323,6 +328,7 @@ mod tests {
                     },
                 ],
             }],
+            index_map: DEFAULT_INDEX_MAP.to_vec(),
             palette,
             materials,
             scenes,

@@ -5,11 +5,7 @@
 ///
 /// for example :
 /// ```
-/// let R = [
-///   [0,  1,  0],
-///   [0,  0, -1],
-///   [-1, 0,  0],
-/// ];
+/// let R = [[0, 1, 0], [0, 0, -1], [-1, 0, 0]];
 /// let _r: u8 = (1 << 0) | (2 << 2) | (0 << 4) | (1 << 5) | (1 << 6);
 /// ```
 ///
@@ -43,8 +39,9 @@ impl Rotation {
         Rotation(byte)
     }
 
-    /// Decompose the Signed Permutation Matrix into a rotation component, represented by a Quaternion,
-    /// and a flip component, represented by a Vec3 which is either Vec3::ONE or -Vec3::ONE.
+    /// Decompose the Signed Permutation Matrix into a rotation component,
+    /// represented by a Quaternion, and a flip component, represented by a
+    /// Vec3 which is either Vec3::ONE or -Vec3::ONE.
     pub fn to_quat_scale(&self) -> (Quat, Vec3) {
         let index_nz1 = self.0 & 0b11;
         let index_nz2 = (self.0 >> 2) & 0b11;
