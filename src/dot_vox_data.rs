@@ -83,7 +83,7 @@ impl DotVoxData {
 
     fn write_string(buffer: &mut Vec<u8>, str: &String) {
         buffer.extend_from_slice(&((str.len() as u32).to_le_bytes()));
-        buffer.extend_from_slice(&str.as_bytes());
+        buffer.extend_from_slice(str.as_bytes());
     }
 
     fn write_dict(buffer: &mut Vec<u8>, dict: &Dict) {
@@ -115,8 +115,8 @@ impl DotVoxData {
                 children,
             } => {
                 id = "nGRP";
-                node_chunk.extend_from_slice(&(i as u32).to_le_bytes());
-                Self::write_dict(&mut node_chunk, &attributes);
+                node_chunk.extend_from_slice(&i.to_le_bytes());
+                Self::write_dict(&mut node_chunk, attributes);
                 node_chunk.extend_from_slice(&((children.len() as u32).to_le_bytes()));
                 for child in children {
                     node_chunk.extend_from_slice(&child.to_le_bytes());
@@ -129,8 +129,8 @@ impl DotVoxData {
                 attributes,
             } => {
                 id = "nTRN";
-                node_chunk.extend_from_slice(&(i as u32).to_le_bytes());
-                Self::write_dict(&mut node_chunk, &attributes);
+                node_chunk.extend_from_slice(&i.to_le_bytes());
+                Self::write_dict(&mut node_chunk, attributes);
                 node_chunk.extend_from_slice(&child.to_le_bytes());
                 node_chunk.extend_from_slice(&u32::MAX.to_le_bytes());
                 node_chunk.extend_from_slice(&layer_id.to_le_bytes());
@@ -141,8 +141,8 @@ impl DotVoxData {
             }
             SceneNode::Shape { attributes, models } => {
                 id = "nSHP";
-                node_chunk.extend_from_slice(&(i as u32).to_le_bytes());
-                Self::write_dict(&mut node_chunk, &attributes);
+                node_chunk.extend_from_slice(&i.to_le_bytes());
+                Self::write_dict(&mut node_chunk, attributes);
                 node_chunk.extend_from_slice(&(models.len() as u32).to_le_bytes());
                 for model in models {
                     node_chunk.extend_from_slice(&model.model_id.to_le_bytes());

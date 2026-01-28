@@ -1,17 +1,16 @@
 use crate::{
-    model,
+    Color, DEFAULT_PALETTE, DotVoxData, Frame, Layer, Model, RawLayer, SceneGroup, SceneNode,
+    SceneShape, SceneTransform, Size, Voxel, model,
     palette::{self, DEFAULT_INDEX_MAP},
-    scene, Color, DotVoxData, Frame, Layer, Model, RawLayer, SceneGroup, SceneNode, SceneShape,
-    SceneTransform, Size, Voxel, DEFAULT_PALETTE,
+    scene,
 };
 use nom::{
+    IResult, Parser,
     bytes::complete::{tag, take},
-    combinator::{flat_map, map_res},
     error::make_error,
     multi::{fold_many_m_n, many0},
     number::complete::le_u32,
     sequence::pair,
-    IResult,
 };
 use std::{mem::size_of, str, str::Utf8Error};
 
@@ -63,10 +62,10 @@ impl Material {
     pub fn weight(&self) -> Option<f32> {
         let w = self.get_f32("_weight");
 
-        if let Some(w) = w {
-            if !(0.0..=1.0).contains(&w) {
-                debug!("_weight observed outside of range of [0..1]: {}", w);
-            }
+        if let Some(w) = w
+            && !(0.0..=1.0).contains(&w)
+        {
+            debug!("_weight observed outside of range of [0..1]: {}", w);
         }
 
         w
@@ -193,8 +192,8 @@ pub fn to_str(i: &[u8]) -> Result<String, Utf8Error> {
 }
 
 pub fn parse_vox_file(i: &[u8]) -> IResult<&[u8], DotVoxData> {
-    let (i, _) = tag(MAGIC_NUMBER)(i)?;
-    let (i, version) = le_u32(i)?;
+    let (i, _) = tag(MAGIC_NUMBER).parse(i)?;
+    let (i, version) = le_u32.parse(i)?;
     let (i, main) = parse_chunk(i)?;
     Ok((i, map_chunk_to_data(version, main)))
 }
@@ -278,10 +277,10 @@ fn map_chunk_to_data(version: u32, main: Chunk) -> DotVoxData {
 }
 
 fn parse_chunk(i: &[u8]) -> IResult<&[u8], Chunk> {
-    let (i, id) = map_res(take(4usize), str::from_utf8)(i)?;
-    let (i, (content_size, children_size)) = pair(le_u32, le_u32)(i)?;
-    let (i, chunk_content) = take(content_size)(i)?;
-    let (i, child_content) = take(children_size)(i)?;
+    let (i, id) = take(4usize).map_res(str::from_utf8).parse(i)?;
+    let (i, (content_size, children_size)) = pair(le_u32, le_u32).parse(i)?;
+    let (i, chunk_content) = take(content_size).parse(i)?;
+    let (i, child_content) = take(children_size).parse(i)?;
     let chunk = build_chunk(id, chunk_content, children_size, child_content);
     Ok((i, chunk))
 }
@@ -304,7 +303,7 @@ fn build_chunk(id: &str, chunk_content: &[u8], children_size: u32, child_content
             }
         }
     } else {
-        let result: IResult<&[u8], Vec<Chunk>> = many0(parse_chunk)(child_content);
+        let result: IResult<&[u8], Vec<Chunk>> = many0(parse_chunk).parse(child_content);
         let child_chunks = match result {
             Ok((_, result)) => result,
             result => {
@@ -386,12 +385,12 @@ fn build_layer_chunk(chunk_content: &[u8]) -> Chunk {
 }
 
 pub fn parse_material(i: &[u8]) -> IResult<&[u8], Material> {
-    let (i, (id, properties)) = pair(le_u32, parse_dict)(i)?;
+    let (i, (id, properties)) = pair(le_u32, parse_dict).parse(i)?;
     Ok((i, Material { id, properties }))
 }
 
 pub(crate) fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
-    let (i, n) = le_u32(i)?;
+    let (i, n) = le_u32.parse(i)?;
     let n = validate_count(i, n, size_of::<u32>() * 2)?;
 
     let init = move || Dict::with_capacity(n);
@@ -399,16 +398,15 @@ pub(crate) fn parse_dict(i: &[u8]) -> IResult<&[u8], Dict> {
         map.insert(key, value);
         map
     };
-    fold_many_m_n(n, n, parse_dict_entry, init, fold)(i)
+    fold_many_m_n(n, n, parse_dict_entry, init, fold).parse(i)
 }
 
 fn parse_dict_entry(i: &[u8]) -> IResult<&[u8], (String, String)> {
-    pair(parse_string, parse_string)(i)
+    pair(parse_string, parse_string).parse(i)
 }
 
 fn parse_string(i: &[u8]) -> IResult<&[u8], String> {
-    let bytes = flat_map(le_u32, take);
-    map_res(bytes, to_str)(i)
+    le_u32.flat_map(take).map_res(to_str).parse(i)
 }
 
 /// Validate that a given count of items is possible to achieve given the size

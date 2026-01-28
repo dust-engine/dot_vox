@@ -1,6 +1,5 @@
 use nom::bytes::complete::take;
-use nom::sequence::tuple;
-use nom::{combinator::all_consuming, multi::many0, number::complete::le_u8, IResult};
+use nom::{IResult, Parser, combinator::all_consuming, multi::many0, number::complete::le_u8};
 
 lazy_static! {
   /// The default palette used by [MagicaVoxel](https://ephtracy.github.io/) -- this is supplied if no palette
@@ -17,15 +16,15 @@ lazy_static! {
 pub const DEFAULT_INDEX_MAP: &[u8] = &create_default_index_map();
 
 pub fn extract_index_map(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    all_consuming(take(256usize))(i)
+    all_consuming(take(256usize)).parse(i)
 }
 
 pub fn extract_palette(i: &[u8]) -> IResult<&[u8], Vec<Color>> {
-    all_consuming(many0(parse_color))(i)
+    all_consuming(many0(parse_color)).parse(i)
 }
 
 fn parse_color(input: &[u8]) -> IResult<&[u8], Color> {
-    let (input, (r, g, b, a)) = tuple((le_u8, le_u8, le_u8, le_u8))(input)?;
+    let (input, (r, g, b, a)) = (le_u8, le_u8, le_u8, le_u8).parse(input)?;
     Ok((input, Color { r, g, b, a }))
 }
 
