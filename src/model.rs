@@ -1,8 +1,7 @@
 use nom::{
+    IResult, Parser,
     multi::count,
-    number::complete::{le_u32, le_u8},
-    sequence::tuple,
-    IResult,
+    number::complete::{le_u8, le_u32},
 };
 
 use crate::parser::validate_count;
@@ -60,12 +59,12 @@ pub struct Voxel {
 }
 
 pub fn parse_size(i: &[u8]) -> IResult<&[u8], Size> {
-    let (i, (x, y, z)) = tuple((le_u32, le_u32, le_u32))(i)?;
+    let (i, (x, y, z)) = (le_u32, le_u32, le_u32).parse(i)?;
     Ok((i, Size { x, y, z }))
 }
 
 fn parse_voxel(input: &[u8]) -> IResult<&[u8], Voxel> {
-    let (input, (x, y, z, i)) = tuple((le_u8, le_u8, le_u8, le_u8))(input)?;
+    let (input, (x, y, z, i)) = (le_u8, le_u8, le_u8, le_u8).parse(input)?;
     Ok((
         input,
         Voxel {
@@ -78,7 +77,7 @@ fn parse_voxel(input: &[u8]) -> IResult<&[u8], Voxel> {
 }
 
 pub fn parse_voxels(i: &[u8]) -> IResult<&[u8], Vec<Voxel>> {
-    let (i, n) = le_u32(i)?;
+    let (i, n) = le_u32.parse(i)?;
     let n = validate_count(i, n, 4)?;
-    count(parse_voxel, n)(i)
+    count(parse_voxel, n).parse(i)
 }

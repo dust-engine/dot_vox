@@ -1,12 +1,11 @@
 use std::mem::size_of;
 
-use crate::{parser::validate_count, Color, Dict, Rotation};
+use crate::{Color, Dict, Rotation, parser::validate_count};
 use nom::{
+    IResult, Parser,
     multi::count,
     number::complete::{le_i32, le_u32},
     sequence::pair,
-    sequence::tuple,
-    IResult,
 };
 
 use crate::parser::parse_dict;
@@ -33,7 +32,7 @@ impl ShapeModel {
     pub fn frame_index(&self) -> Option<u32> {
         if let Some(input) = self.attributes.get("_f") {
             if let IResult::<&str, u32>::Ok((_, idx)) =
-                nom::character::complete::u32(input.as_str())
+                nom::character::complete::u32.parse(input.as_str())
             {
                 return Some(idx);
             } else {
@@ -110,14 +109,14 @@ impl Layer {
     /// Return the color associated with this layer, if one has been set.
     pub fn color(&self) -> Option<Color> {
         if let Some(x) = self.attributes.get("_color") {
-            if let IResult::<&str, (u8, &str, u8, &str, u8)>::Ok((_, (r, _, g, _, b))) =
-                tuple((
-                    nom::character::complete::u8,
-                    nom::character::complete::space1,
-                    nom::character::complete::u8,
-                    nom::character::complete::space1,
-                    nom::character::complete::u8,
-                ))(x.as_str())
+            if let IResult::<&str, (u8, &str, u8, &str, u8)>::Ok((_, (r, _, g, _, b))) = (
+                nom::character::complete::u8,
+                nom::character::complete::space1,
+                nom::character::complete::u8,
+                nom::character::complete::space1,
+                nom::character::complete::u8,
+            )
+                .parse(x.as_str())
             {
                 return Some(Color { r, g, b, a: 0 });
             } else {
@@ -133,12 +132,12 @@ impl Layer {
 }
 
 fn parse_node_header(i: &[u8]) -> IResult<&[u8], NodeHeader> {
-    let (i, (id, attributes)) = pair(le_u32, parse_dict)(i)?;
+    let (i, (id, attributes)) = pair(le_u32, parse_dict).parse(i)?;
     Ok((i, NodeHeader { id, attributes }))
 }
 
 fn parse_scene_shape_model(i: &[u8]) -> IResult<&[u8], ShapeModel> {
-    let (i, (model_id, attributes)) = pair(le_u32, parse_dict)(i)?;
+    let (i, (model_id, attributes)) = pair(le_u32, parse_dict).parse(i)?;
     Ok((
         i,
         ShapeModel {
@@ -150,12 +149,12 @@ fn parse_scene_shape_model(i: &[u8]) -> IResult<&[u8], ShapeModel> {
 
 pub fn parse_scene_transform(i: &[u8]) -> IResult<&[u8], SceneTransform> {
     let (i, header) = parse_node_header(i)?;
-    let (i, child) = le_u32(i)?;
-    let (i, _ignored) = le_i32(i)?;
-    let (i, layer_id) = le_u32(i)?;
-    let (i, frame_count) = le_u32(i)?;
+    let (i, child) = le_u32.parse(i)?;
+    let (i, _ignored) = le_i32.parse(i)?;
+    let (i, layer_id) = le_u32.parse(i)?;
+    let (i, frame_count) = le_u32.parse(i)?;
     let frame_count = validate_count(i, frame_count, size_of::<u32>())?;
-    let (i, frames) = count(parse_dict, frame_count)(i)?;
+    let (i, frames) = count(parse_dict, frame_count).parse(i)?;
     Ok((
         i,
         SceneTransform {
@@ -169,24 +168,24 @@ pub fn parse_scene_transform(i: &[u8]) -> IResult<&[u8], SceneTransform> {
 
 pub fn parse_scene_group(i: &[u8]) -> IResult<&[u8], SceneGroup> {
     let (i, header) = parse_node_header(i)?;
-    let (i, child_count) = le_u32(i)?;
+    let (i, child_count) = le_u32.parse(i)?;
     let child_count = validate_count(i, child_count, size_of::<u32>())?;
-    let (i, children) = count(le_u32, child_count)(i)?;
+    let (i, children) = count(le_u32, child_count).parse(i)?;
     Ok((i, SceneGroup { header, children }))
 }
 
 pub fn parse_scene_shape(i: &[u8]) -> IResult<&[u8], SceneShape> {
     let (i, header) = parse_node_header(i)?;
-    let (i, model_count) = le_u32(i)?;
+    let (i, model_count) = le_u32.parse(i)?;
     let model_count = validate_count(i, model_count, size_of::<u32>() * 2)?;
-    let (i, models) = count(parse_scene_shape_model, model_count)(i)?;
+    let (i, models) = count(parse_scene_shape_model, model_count).parse(i)?;
     Ok((i, SceneShape { header, models }))
 }
 
 pub fn parse_layer(i: &[u8]) -> IResult<&[u8], RawLayer> {
-    let (i, id) = le_u32(i)?;
+    let (i, id) = le_u32.parse(i)?;
     let (i, attributes) = parse_dict(i)?;
-    let (i, _ignored) = le_u32(i)?;
+    let (i, _ignored) = le_u32.parse(i)?;
     Ok((i, RawLayer { id, attributes }))
 }
 
@@ -239,7 +238,7 @@ impl Frame {
     pub fn orientation(&self) -> Option<Rotation> {
         if let Some(value) = self.attributes.get("_r") {
             if let IResult::<&str, u8>::Ok((_, byte_rotation)) =
-                nom::character::complete::u8(value.as_str())
+                nom::character::complete::u8.parse(value.as_str())
             {
                 return Some(Rotation::from_byte(byte_rotation));
             } else {
@@ -254,13 +253,14 @@ impl Frame {
     /// frame begins in world space.
     pub fn position(&self) -> Option<Position> {
         if let Some(value) = self.attributes.get("_t") {
-            match tuple((
+            match (
                 nom::character::complete::i32,
                 nom::character::complete::space1,
                 nom::character::complete::i32,
                 nom::character::complete::space1,
                 nom::character::complete::i32,
-            ))(value.as_str())
+            )
+                .parse(value.as_str())
             {
                 IResult::<&str, (i32, &str, i32, &str, i32)>::Ok((_, (x, _, y, _, z))) => {
                     return Some(Position { x, y, z });
@@ -279,7 +279,7 @@ impl Frame {
     pub fn frame_index(&self) -> Option<u32> {
         if let Some(value) = self.attributes.get("_f") {
             if let IResult::<&str, u32>::Ok((_, frame_idx)) =
-                nom::character::complete::u32(value.as_str())
+                nom::character::complete::u32.parse(value.as_str())
             {
                 return Some(frame_idx);
             } else {

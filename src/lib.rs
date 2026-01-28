@@ -253,7 +253,6 @@ pub mod placeholder {
 
         /// Layers extracted from placeholder.vox
         pub static ref LAYERS: Vec<Layer> = (0..8)
-            .into_iter()
             .map(|layer| Layer {
                 attributes: {
                     let mut map = Dict::new();
